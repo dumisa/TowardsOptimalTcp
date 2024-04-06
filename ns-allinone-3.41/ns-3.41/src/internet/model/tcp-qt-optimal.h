@@ -104,7 +104,7 @@ class TcpQtOptimal : public TcpNewReno
 	  uint32_t m_cntRtt;                 //!< Number of RTT measurements during last RTT
 	  bool m_doingQtOptimalNow;         //!< If true, do Vegas for this RTT
 	  SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
-	  double m_Rt_mult {1.5};
+	  double m_Rt_mult;
 
 };
 

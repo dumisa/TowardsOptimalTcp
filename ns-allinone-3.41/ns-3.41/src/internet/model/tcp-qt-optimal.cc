@@ -22,7 +22,13 @@ TypeId TcpQtOptimal::GetTypeId()
     static TypeId tid = TypeId("ns3::TcpQtOptimal")
                             .SetParent<TcpNewReno>()
                             .AddConstructor<TcpQtOptimal>()
-                            .SetGroupName("Internet");
+                            .SetGroupName("Internet")
+                .AddAttribute("m_Rt_mult",
+                            "multiplication factor for Rtarget in proportion to Rmin",
+                            DoubleValue(1.5),
+                            MakeDoubleAccessor(&TcpQtOptimal::m_Rt_mult),
+                            MakeDoubleChecker<double>(0.0));
+                            
     return tid;
 }
 
