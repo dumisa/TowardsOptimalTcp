@@ -58,7 +58,7 @@ public:
   dumbbell ();
   dumbbell(uint8_t flows, std::string TcpType, std::string btlBW, std::string btlDelay, 
         std::string accessBW, std::string accessDelay, std::string queueDisc, uint32_t queueDiscSize, 
-        double error_p, double sim_start, double sim_stop);
+        double error_p, double sim_start, double sim_stop, double Rt_mult);
   ~dumbbell ();
   void CreateBtlneck ();
   void CreateSenderReceiverPairs (uint32_t);
@@ -131,8 +131,6 @@ public:
   Ptr< QueueDisc > GetLeftAccessQueueDisc (uint32_t i) const {return m_leftAccess_queueDiscs.Get (i);}
   Ptr< QueueDisc > GetRightAccessQueueDisc (uint32_t i) const {return m_rightAccess_queueDiscs.Get (i);}
   uint16_t GetBtlQueueDiscCount () const {return m_btl_queueDiscs.GetN ();}
-
-
 
 private:
     NodeContainer          m_leftLeaf;            //!< Left Leaf nodes

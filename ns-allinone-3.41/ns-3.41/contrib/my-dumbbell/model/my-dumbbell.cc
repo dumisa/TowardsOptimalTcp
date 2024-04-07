@@ -31,14 +31,14 @@ dumbbell::dumbbell(uint8_t flows, std::string TcpType,
     std::string btlBW, std::string btlDelay, 
     std::string accessBW, std::string accessDelay, 
     std::string queueDisc, uint32_t queueDiscSize,
-    double error_p, double sim_start, double sim_stop)
+    double error_p, double sim_start, double sim_stop, double Rt_mult)
 {
 
   // Configure the error model
   // Here we use RateErrorModel with packet error rate
 
     queueDisc = "ns3::" + queueDisc;
-  // Configure links
+    // Configure links
     ns3::PointToPointHelper bottleNeckLink;
     bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue(btlBW));
     bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue(btlDelay));
@@ -52,16 +52,24 @@ dumbbell::dumbbell(uint8_t flows, std::string TcpType,
 
     //This configuration is important to ensure certainity or minimal requirement for uncontrolled queues
     Config::SetDefault ("ns3::DropTailQueue<Packet>::MaxSize", StringValue ("1p"));
-    std::cout << " TypeId = " <<  TcpType << std::endl;
     Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::" + TcpType));
-    //Config::SetDefault ("ns3::TcpSocket::SndBufSize", UintegerValue (6291456));
-    //Config::SetDefault ("ns3::TcpSocket::RcvBufSize", UintegerValue (6291456));
     Config::SetDefault ("ns3::TcpSocket::SndBufSize", UintegerValue (62914560));
     Config::SetDefault ("ns3::TcpSocket::RcvBufSize", UintegerValue (62914560));
     Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (10));
     uint32_t delAckCount = 2;
     Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (delAckCount));
-    Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448));  
+    Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448)); 
+
+    if (TcpType == "TcpQtOptimal")
+    {
+        //Config::SetDefault ("ns3::QtOptimal::SetRt_mult", DoubleValue (Rt_mult));
+        Config::SetDefault ("ns3::TcpQtOptimal::Rt_mult", DoubleValue (Rt_mult));
+        std::cout << " TcpType = " <<  TcpType << "_" << Rt_mult << "minRTT" << std::endl;
+    }
+    else
+    {
+        std::cout << " TcpType = " <<  TcpType << std::endl;
+    }
 
     // Create the nodes
     m_routers.Create (2);
@@ -72,14 +80,12 @@ dumbbell::dumbbell(uint8_t flows, std::string TcpType,
     // Add the link connecting routers
     m_routerDevices = bottleNeckLink.Install (m_routers);
 
-
     std::cout << "Bottleneck link installed - created routerdevices" << std::endl;  
 
     // Add the left side links
     for (uint32_t i = 0; i < flows; ++i)
     {
-        NetDeviceContainer c = accessLink.Install (m_routers.Get (0),
-                                                 m_leftLeaf.Get (i));
+        NetDeviceContainer c = accessLink.Install (m_routers.Get (0), m_leftLeaf.Get (i));
         m_leftRouterDevices.Add (c.Get (0));
         m_leftLeafDevices.Add (c.Get (1));
     }
@@ -145,6 +151,7 @@ dumbbell::dumbbell(uint8_t flows, std::string TcpType,
         AddressValue remoteAddress (InetSocketAddress (m_rightLeafInterfaces.GetAddress (i, 0), port));
         Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448));
         BulkSendHelper ftp ("ns3::TcpSocketFactory", Address ());
+
         ftp.SetAttribute ("Remote", remoteAddress);
         ftp.SetAttribute ("SendSize", UintegerValue (1448));
         ftp.SetAttribute ("MaxBytes", UintegerValue (0));
