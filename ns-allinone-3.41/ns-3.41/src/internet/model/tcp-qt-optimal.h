@@ -78,6 +78,8 @@ class TcpQtOptimal : public TcpNewReno
 
 		virtual Ptr<TcpCongestionOps> Fork () override;
 
+		void SetRt_mult (double Rt_mult);
+
 	  private:
 	    /**
 	     * \as in Vegas, brief Enable QtOptimal algorithm to start taking QtOptimal samples
@@ -102,9 +104,10 @@ class TcpQtOptimal : public TcpNewReno
 	  Time m_baseRtt;                    //!< Minimum of all ModNewReno RTT measurements seen during connection
 	  Time m_minRtt;                     //!< Minimum of all RTT measurements within last RTT
 	  uint32_t m_cntRtt;                 //!< Number of RTT measurements during last RTT
+	  double m_Rt_mult;
 	  bool m_doingQtOptimalNow;         //!< If true, do Vegas for this RTT
 	  SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
-	  double m_Rt_mult;
+	  
 
 };
 

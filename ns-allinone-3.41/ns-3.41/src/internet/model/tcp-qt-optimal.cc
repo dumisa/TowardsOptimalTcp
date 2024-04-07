@@ -23,10 +23,10 @@ TypeId TcpQtOptimal::GetTypeId()
                             .SetParent<TcpNewReno>()
                             .AddConstructor<TcpQtOptimal>()
                             .SetGroupName("Internet")
-                .AddAttribute("m_Rt_mult",
+                .AddAttribute("Rt_mult",
                             "multiplication factor for Rtarget in proportion to Rmin",
                             DoubleValue(1.5),
-                            MakeDoubleAccessor(&TcpQtOptimal::m_Rt_mult),
+                            MakeDoubleAccessor(&TcpQtOptimal::SetRt_mult),
                             MakeDoubleChecker<double>(0.0));
                             
     return tid;
@@ -58,6 +58,11 @@ TcpQtOptimal::TcpQtOptimal (const TcpQtOptimal& sock)
 TcpQtOptimal::~TcpQtOptimal (void)
 {
     NS_LOG_FUNCTION (this);
+}
+
+void TcpQtOptimal::SetRt_mult (double Rt_mult)
+{
+    m_Rt_mult = Rt_mult;
 }
 
 void
@@ -173,8 +178,8 @@ TcpQtOptimal::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
             std::uniform_real_distribution<double> distribution(0.0,1.0);
             if (distribution(generator) > 0.90) 
             {
-                //uncomment for multiflow fairness tests
-                //Wnew = 300;
+                uncomment for multiflow fairness tests
+                Wnew = 40;
             }
 
             //for debugging

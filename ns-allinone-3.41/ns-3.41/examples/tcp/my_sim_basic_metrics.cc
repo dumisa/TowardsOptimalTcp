@@ -442,11 +442,13 @@ int main (int argc, char *argv[])
     double sim_duration = 200.0;
     std::string sim_name="cwnd_vs_inflight";
 
+    double Rt_mult = 1.5;
+
     CommandLine cmd (__FILE__);
     cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, TcpLinuxReno, "
                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat, "
-                "TcpLp, TcpDctcp, TcpCubic, TcpBbr, TcpBbrV2, TcpOptimal", transport_prot);
+                "TcpLp, TcpDctcp, TcpCubic, TcpBbr, TcpBbrV2, TcpQtOptimal", transport_prot);
     cmd.AddValue ("error_p", "Packet error rate", error_p);
     cmd.AddValue ("btlBW", "Bottleneck bandwidth", btlBW);
     cmd.AddValue ("btlDelay", "Bottleneck delay", btlDelay);
@@ -457,6 +459,7 @@ int main (int argc, char *argv[])
     cmd.AddValue ("BdpMultiplier", "Size of the Queue Disc", BdpMultiplier);
     cmd.AddValue ("num_flows", "Number of flows", num_flows);
     cmd.AddValue ("sim_duration", "simulation duration in seconds", sim_duration);
+    cmd.AddValue ("Rt_mult", "simulation duration in seconds", Rt_mult);
     //cmd.AddValue ("run", "Run index (for setting repeatable seeds)", run);
     //cmd.AddValue ("flow_monitor", "Enable flow monitor", flow_monitor);
     //cmd.AddValue ("pcap_tracing", "Enable or disable PCAP tracing", pcap);
@@ -478,18 +481,27 @@ int main (int argc, char *argv[])
     uint32_t queueSize_pkts = queueSize_bytes/SegmentSize;
 
     dumbbell dumbbellSim(num_flows, transport_prot, btlBW, btlDelay, accessBW, accessDelay, 
-            queue_disc_type, queueSize_pkts, error_p, start_time, stop_time);
+            queue_disc_type, queueSize_pkts, error_p, start_time, stop_time, Rt_mult);
 
     // Simulator::Schedule (Seconds (0.00001), &TraceInFlight, file_prefix + "-inflight.data");
     // Create a new directory to store the output of the program
 
-    file_prefix = transport_prot + "-" + std::to_string(num_flows) + "-flows-" 
+    std::string file_transport_prot = transport_prot;
+    if (transport_prot == "TcpQtOptimal")
+    {
+        uint32_t num1 = Rt_mult*10;
+        uint32_t num2 = num1/10;
+        uint32_t num3 = num1 % 10;
+
+        file_transport_prot = file_transport_prot + "_" + std::to_string(num2)+ "." + std::to_string(num3) + "minRTT";
+    }
+
+    file_prefix = file_transport_prot  + "-" + std::to_string(num_flows) + "-flows-" 
               + btlBW + "-" + btlDelay + "-" 
               + std::to_string(queueSize_pkts) + "p-";
 
-    dir = "results/" + sim_name + "/" + std::to_string(num_flows) + "-flows/" 
-              + btlBW + "-" + btlDelay + "/"
-              + std::to_string(queueSize_pkts) + "p-btlqueue/";
+    dir = sim_name + "/" + file_transport_prot + "/" + std::to_string(num_flows) + "-flows/" 
+              + btlBW + "-" + btlDelay + "/" + std::to_string(queueSize_pkts) + "p-btlqueue/";
     std::string dirToSave = "mkdir -p " + dir;
 
     if (system (dirToSave.c_str ()) == -1)
