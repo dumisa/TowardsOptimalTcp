@@ -27,11 +27,14 @@ TypeId TcpQtOptimal::GetTypeId()
                             "multiplication factor for Rtarget in proportion to Rmin",
                             DoubleValue(1.5),
                             MakeDoubleAccessor(&TcpQtOptimal::SetRt_mult),
-                            MakeDoubleChecker<double>(0.0));
-                            
+                            MakeDoubleChecker<double>(0.0))
+                .AddAttribute("fairness_index",
+                            "multiplication factor for Rtarget in proportion to Rmin",
+                            BooleanValue(false),
+                            MakeBooleanAccessor(&TcpQtOptimal::SetFairnessIndex),
+                            MakeBooleanChecker ());
     return tid;
 }
-
 
 TcpQtOptimal::TcpQtOptimal ()
   : TcpNewReno(),
@@ -63,6 +66,11 @@ TcpQtOptimal::~TcpQtOptimal (void)
 void TcpQtOptimal::SetRt_mult (double Rt_mult)
 {
     m_Rt_mult = Rt_mult;
+}
+
+void TcpQtOptimal::SetFairnessIndex (bool fairness_index)
+{   
+    m_fairness_index = fairness_index;
 }
 
 void
@@ -174,12 +182,19 @@ TcpQtOptimal::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
             if (Wnew == W) Wnew = W + (Lpred - L); //required for persistent excitation
             Wnew = std::max((int) Wnew, 2);
 
-            static std::default_random_engine generator;
-            std::uniform_real_distribution<double> distribution(0.0,1.0);
-            if (distribution(generator) > 0.90) 
-            {
-                uncomment for multiflow fairness tests
-                Wnew = 40;
+            if (m_fairness_index)
+            {            
+                static std::default_random_engine generator;
+                std::uniform_real_distribution<double> distribution(0.0,1.0);
+                if (distribution(generator) > 0.90) 
+                {
+                    //uncomment for multiflow fairness tests
+                    Wnew = 40; //static figure for the specific simulation where Bw=10Mbps
+                               // and one-way-delay = 100ms
+                               // dynamic mechanisms to be implemented in the future
+                }
+                //std::cout << "fainess = " << m_fairness_index << std::endl;
+                //std::getchar ();
             }
 
             //for debugging

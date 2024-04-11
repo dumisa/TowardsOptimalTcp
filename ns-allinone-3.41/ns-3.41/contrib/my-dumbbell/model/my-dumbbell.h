@@ -56,9 +56,9 @@ class dumbbell
 {
 public:
   dumbbell ();
-  dumbbell(uint8_t flows, std::string TcpType, std::string btlBW, std::string btlDelay, 
+  dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay, 
         std::string accessBW, std::string accessDelay, std::string queueDisc, uint32_t queueDiscSize, 
-        double error_p, double sim_start, double sim_stop, double Rt_mult);
+        double error_p, double sim_start, double sim_stop);
   ~dumbbell ();
   void CreateBtlneck ();
   void CreateSenderReceiverPairs (uint32_t);
@@ -66,12 +66,11 @@ public:
   void AddSenderReceiverPairs (uint32_t);
   void AddAccessLinks ();
   void CreateTopology ();
-  void CreateTopology (uint8_t flows, std::string TcpType, std::string btlBW, std::string btlDelay, 
+  void CreateTopology (uint8_t flows, std::string btlBW, std::string btlDelay, 
         std::string accessBW, std::string accessDelay, std::string queueDisc, uint32_t queueDiscSize, 
         double error_p, double sim_start, double sim_stop);
   void InstallStack (InternetStackHelper);
-  void AssignIpv4Addresses (Ipv4AddressHelper,
-                  Ipv4AddressHelper, Ipv4AddressHelper);
+  void AssignIpv4Addresses (Ipv4AddressHelper, Ipv4AddressHelper, Ipv4AddressHelper);
   void printTopologyConfirmation ();
   void printAssignConfirmation ();
   //void ChangeBW (uint64_t);

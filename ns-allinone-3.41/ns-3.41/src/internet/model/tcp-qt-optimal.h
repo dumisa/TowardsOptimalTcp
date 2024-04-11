@@ -79,6 +79,7 @@ class TcpQtOptimal : public TcpNewReno
 		virtual Ptr<TcpCongestionOps> Fork () override;
 
 		void SetRt_mult (double Rt_mult);
+		void SetFairnessIndex (bool fairness_index);
 
 	  private:
 	    /**
@@ -105,6 +106,7 @@ class TcpQtOptimal : public TcpNewReno
 	  Time m_minRtt;                     //!< Minimum of all RTT measurements within last RTT
 	  uint32_t m_cntRtt;                 //!< Number of RTT measurements during last RTT
 	  double m_Rt_mult;
+	  bool m_fairness_index;
 	  bool m_doingQtOptimalNow;         //!< If true, do Vegas for this RTT
 	  SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
 	  

@@ -27,15 +27,11 @@ namespace ns3 {
 dumbbell::~dumbbell () {}
 dumbbell::dumbbell () {}
 
-dumbbell::dumbbell(uint8_t flows, std::string TcpType,
-    std::string btlBW, std::string btlDelay, 
+dumbbell::dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay, 
     std::string accessBW, std::string accessDelay, 
     std::string queueDisc, uint32_t queueDiscSize,
-    double error_p, double sim_start, double sim_stop, double Rt_mult)
+    double error_p, double sim_start, double sim_stop)
 {
-
-  // Configure the error model
-  // Here we use RateErrorModel with packet error rate
 
     queueDisc = "ns3::" + queueDisc;
     // Configure links
@@ -49,27 +45,6 @@ dumbbell::dumbbell(uint8_t flows, std::string TcpType,
             ns3::StringValue(accessBW));
     accessLink.SetChannelAttribute("Delay",
             ns3::StringValue(accessDelay));
-
-    //This configuration is important to ensure certainity or minimal requirement for uncontrolled queues
-    Config::SetDefault ("ns3::DropTailQueue<Packet>::MaxSize", StringValue ("1p"));
-    Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::" + TcpType));
-    Config::SetDefault ("ns3::TcpSocket::SndBufSize", UintegerValue (62914560));
-    Config::SetDefault ("ns3::TcpSocket::RcvBufSize", UintegerValue (62914560));
-    Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (10));
-    uint32_t delAckCount = 2;
-    Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (delAckCount));
-    Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448)); 
-
-    if (TcpType == "TcpQtOptimal")
-    {
-        //Config::SetDefault ("ns3::QtOptimal::SetRt_mult", DoubleValue (Rt_mult));
-        Config::SetDefault ("ns3::TcpQtOptimal::Rt_mult", DoubleValue (Rt_mult));
-        std::cout << " TcpType = " <<  TcpType << "_" << Rt_mult << "minRTT" << std::endl;
-    }
-    else
-    {
-        std::cout << " TcpType = " <<  TcpType << std::endl;
-    }
 
     // Create the nodes
     m_routers.Create (2);
