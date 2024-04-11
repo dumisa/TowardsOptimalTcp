@@ -114,8 +114,8 @@ build_example(
 )
 
 build_example(
-  NAME my_sim_basic_metrics
-  SOURCE_FILES my_sim_basic_metrics.cc
+  NAME tcp_qt_optimal_sims
+  SOURCE_FILES tcp_qt_optimal_sims.cc
   LIBRARIES_TO_LINK
     ${libpoint-to-point}
     ${libinternet}

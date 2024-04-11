@@ -24,6 +24,7 @@
 #include "ns3/tcp-header.h"
 #include "ns3/traffic-control-module.h"
 #include "ns3/udp-header.h"
+#include "ns3/data-rate.h"
 
 using namespace ns3;
 
@@ -68,6 +69,24 @@ static std::map<uint32_t, uint64_t>          LostPkts;
 static std::vector<uint64_t>  Last_Source_UnackSeq_value;
 static std::vector<double>  Last_Source_UnackSeq_time;
 static std::vector<double>  measured_source_btlBW;
+
+std::string transport_prot = "TcpWestwoodPlus";
+double error_p = 0.0;
+bool tracing = true;
+bool fairness_index = false;
+uint32_t SegmentSize = 1448;
+uint8_t num_flows = 1;
+std::string queue_disc_type = "PfifoFastQueueDisc";
+std::string recovery = "TcpClassicRecovery";
+
+std::string btlBW = "10Mbps";
+std::string accessBW = "10Gbps";
+std::string btlDelay = "100ms";
+std::string accessDelay = "0.01ms";
+double BdpMultiplier = 3; //packets
+double sim_duration = 200.0;
+std::string sim_name="default";
+double Rt_mult = 1;
 
 /**
  * Get the Node Id From Context.
@@ -159,9 +178,11 @@ CwndTracer(std::string context, uint32_t oldval, uint32_t newval)
       agg_last_time = now_time;
   }
 
-  double BW = 10e6;
-  double Rt = 1.2*0.2;
-  double bdp = BW*Rt/8/1448.0;
+  DataRate BW(btlBW);
+  Time delay(btlDelay);
+  double RTT = 2*delay.GetSeconds ();
+  double Rt = Rt_mult*RTT;
+  double bdp = BW.GetBitRate ()*Rt/8/1448.0;
 
   double cost = ((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())*((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())
             + (RttValue[nodeId] - Rt)*(RttValue[nodeId] - Rt) 
@@ -273,9 +294,11 @@ InFlightTracer(std::string context, uint32_t old [[maybe_unused]], uint32_t inFl
     last_cWndValue[nodeId] = 0;
   }
 
-  double BW = 10e6;
-  double Rt = 1.2*0.2;
-  double bdp = BW*Rt/8/1448.0;
+  DataRate BW(btlBW);
+  Time delay(btlDelay);
+  double RTT = 2*delay.GetSeconds ();
+  double Rt = Rt_mult*RTT;
+  double bdp = BW.GetBitRate ()*Rt/8/1448.0;
 
   double cost = ((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())*((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())
             + (RttValue[nodeId] - Rt)*(RttValue[nodeId] - Rt) 
@@ -419,23 +442,6 @@ void ChangeDelay (dumbbell dumbbellSim, double delay)
 
 int main (int argc, char *argv[])
 {
-    std::string transport_prot = "TcpWestwoodPlus";
-    double error_p = 0.0;
-    bool tracing = true;
-    bool fairness = false;
-    uint32_t SegmentSize = 1448;
-    uint8_t num_flows = 1;
-    std::string queue_disc_type = "PfifoFastQueueDisc";
-    std::string recovery = "TcpClassicRecovery";
-
-    std::string btlBW = "10Mbps";
-    std::string accessBW = "10Gbps";
-    std::string btlDelay = "100ms";
-    std::string accessDelay = "0.01ms";
-    double BdpMultiplier = 3; //packets
-    double sim_duration = 200.0;
-    std::string sim_name="default";
-    double Rt_mult = 1.5;
 
     CommandLine cmd (__FILE__);
     cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, TcpLinuxReno, "
@@ -453,7 +459,7 @@ int main (int argc, char *argv[])
     cmd.AddValue ("num_flows", "Number of flows", num_flows);
     cmd.AddValue ("sim_duration", "simulation duration in seconds", sim_duration);
     cmd.AddValue ("Rt_mult", "simulation duration in seconds", Rt_mult);
-    cmd.AddValue ("fairness", "simulation duration in seconds", fairness);
+    cmd.AddValue ("fairness_index", "simulation duration in seconds", fairness_index);
     cmd.Parse (argc, argv);
 
     //This configuration is important to ensure certainity or minimal requirement for uncontrolled queues
@@ -469,7 +475,7 @@ int main (int argc, char *argv[])
     if (transport_prot == "TcpQtOptimal")
     {
         Config::SetDefault ("ns3::TcpQtOptimal::Rt_mult", DoubleValue (Rt_mult));
-        Config::SetDefault ("ns3::TcpQtOptimal::fairness", BooleanValue (fairness));
+        Config::SetDefault ("ns3::TcpQtOptimal::fairness_index", BooleanValue (fairness_index));
         std::cout << " transport_prot = " <<  transport_prot << "_" << Rt_mult << "minRTT" << std::endl;
     }
     else
@@ -510,7 +516,7 @@ int main (int argc, char *argv[])
 
     file_prefix = file_transport_prot  + "-" + std::to_string(num_flows) + "-flows-" 
               + btlBW + "-" + btlDelay + "-" 
-              + std::to_string(queueSize_pkts) + "p-";
+              + std::to_string(queueSize_pkts) + "p";
 
     dir = sim_name + "/" + file_transport_prot + "/" + std::to_string(num_flows) + "-flows/" 
               + btlBW + "-" + btlDelay + "/" + std::to_string(queueSize_pkts) + "p-btlqueue/";
@@ -527,7 +533,7 @@ int main (int argc, char *argv[])
     if (tracing)
     {
         AsciiTraceHelper ascii;
-        std:: string cwnd_tr_file_name = dir + file_prefix + "Agg"+ "-cwnd.data";
+        std:: string cwnd_tr_file_name = dir + file_prefix + "-Agg"+ "-cwnd.data";
         AggStream = ascii.CreateFileStream(cwnd_tr_file_name);
 
         for (uint16_t index = 0; index < num_flows; index++)
