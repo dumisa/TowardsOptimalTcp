@@ -192,12 +192,16 @@ TcpQtOptimal::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
             uint32_t W = tcb->GetCwndInSegments (); //cwnd in packets
             // predict average occupancy
             uint32_t Lpred = L + W - W*R/Rt;
-            if (Lpred == L) Lpred = L + 1;
+            //if (Lpred == L) Lpred = L + 1;
             Lpred = std::max((int) Lpred, 2);
 
             uint32_t Wnew = W + std::ceil(Rmin*((double) Lpred - (double) L)/R);
-            //if (Wnew == W) Wnew = Lpred - L + std::ceil(W*(Rmin + Rt)/(2*Rt)); //required for persistent excitation
-            if (Wnew == W) Wnew = W + (Lpred - L); //required for persistent excitation
+            if (Lpred == L)
+            {
+                Wnew = std::ceil(Rt*W/R + 1);
+            }
+
+            if (Wnew == W) Wnew = W + 1; //(Lpred - L); //required for persistent excitation
             Wnew = std::max((int) Wnew, 2);
 
             if (m_fairness_index)
