@@ -442,6 +442,7 @@ void ChangeDelay (dumbbell dumbbellSim, double delay)
 
 int main (int argc, char *argv[])
 {
+    bool stochBW = false;
 
     CommandLine cmd (__FILE__);
     cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, TcpLinuxReno, "
@@ -459,7 +460,8 @@ int main (int argc, char *argv[])
     cmd.AddValue ("num_flows", "Number of flows", num_flows);
     cmd.AddValue ("sim_duration", "simulation duration in seconds", sim_duration);
     cmd.AddValue ("Rt_mult", "simulation duration in seconds", Rt_mult);
-    cmd.AddValue ("fairness_index", "simulation duration in seconds", fairness_index);
+    cmd.AddValue ("fairness_index", "fairness index", fairness_index);
+    cmd.AddValue ("stochBW", "Stochastic bandwidth", stochBW);
     cmd.Parse (argc, argv);
 
     //This configuration is important to ensure certainity or minimal requirement for uncontrolled queues
@@ -572,6 +574,11 @@ int main (int argc, char *argv[])
                                source_nodeId);
         }
 
+    }
+
+    if (stochBW)
+    {
+        Simulator::Schedule (Seconds (1), &StochBW, dumbbellSim);
     }
 
     // Simulator::Schedule (Seconds (0.0001), &ChangeBW, dumbbellSim, 10e6);
