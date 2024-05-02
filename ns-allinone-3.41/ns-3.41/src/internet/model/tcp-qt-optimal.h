@@ -36,7 +36,7 @@
 #include "ns3/traced-value.h"
 #include "ns3/event-id.h"
 #include <deque>
-#include <eigen3/Eigen/Eigen>
+//#include <eigen3/Eigen/Eigen>
 #include <math.h>
 #include <iostream>
 #include <iomanip>
@@ -118,6 +118,7 @@ class TcpQtOptimal : public TcpNewReno
 	     */
 	    void DisableQtOptimal();
 
+	    TracedValue<uint32_t> m_predictedBytesInFlight {0};
 
 	private:
 	  Time m_baseRtt;                    //!< Minimum of all ModNewReno RTT measurements seen during connection

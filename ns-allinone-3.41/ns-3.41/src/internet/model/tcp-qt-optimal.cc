@@ -50,12 +50,17 @@ TypeId TcpQtOptimal::GetTypeId()
                             "multiplication factor for Rtarget in proportion to Rmin",
                             BooleanValue(false),
                             MakeBooleanAccessor(&TcpQtOptimal::SetFairnessIndex),
-                            MakeBooleanChecker ());
+                            MakeBooleanChecker ())
+                .AddTraceSource("PredictedBytesInFlight",
+                            "The TCP connection's congestion window",
+                            MakeTraceSourceAccessor(&TcpQtOptimal::m_predictedBytesInFlight),
+                            "ns3::TracedValueCallback::Uint32");
     return tid;
 }
 
 TcpQtOptimal::TcpQtOptimal ()
   : TcpNewReno(),
+    m_predictedBytesInFlight (0),
     m_baseRtt (Time::Max ()),
     m_minRtt (Time::Max ()),
     m_cntRtt(0),
@@ -67,6 +72,7 @@ TcpQtOptimal::TcpQtOptimal ()
 
 TcpQtOptimal::TcpQtOptimal (const TcpQtOptimal& sock)
   : TcpNewReno (sock),
+    m_predictedBytesInFlight (sock.m_predictedBytesInFlight),
     m_baseRtt (sock.m_baseRtt),
     m_minRtt (sock.m_minRtt),
     m_cntRtt (sock.m_cntRtt),
@@ -194,8 +200,10 @@ TcpQtOptimal::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
             uint32_t Lpred = L + W - W*R/Rt;
             //if (Lpred == L) Lpred = L + 1;
             Lpred = std::max((int) Lpred, 2);
+            m_predictedBytesInFlight = Lpred;
 
             uint32_t Wnew = W + std::ceil(Rmin*((double) Lpred - (double) L)/R);
+            //uint32_t Wnew = W + std::ceil(Rmin*((double) Lpred - (double) L)/Rt);
             if (Lpred == L)
             {
                 Wnew = std::ceil(Rt*W/R + 1);
