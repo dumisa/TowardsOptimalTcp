@@ -14,7 +14,7 @@
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
 #include "ns3/enum.h"
-#include "ns3/error-model.h"
+//#include "ns3/error-model.h"
 #include "ns3/event-id.h"
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/internet-module.h"
@@ -501,6 +501,8 @@ int main (int argc, char *argv[])
     dumbbell dumbbellSim(num_flows, btlBW, btlDelay, accessBW, accessDelay, 
             queue_disc_type, queueSize_pkts, error_p, start_time, stop_time);
 
+    std::cout << "dumbbell created successfully " << std::endl;
+
     // Simulator::Schedule (Seconds (0.00001), &TraceInFlight, file_prefix + "-inflight.data");
     // Create a new directory to store the output of the program
 
@@ -573,6 +575,7 @@ int main (int argc, char *argv[])
         }
 
     }
+    std::cout << "simulation schedule done " << std::endl;
 
     // Simulator::Schedule (Seconds (0.0001), &ChangeBW, dumbbellSim, 10e6);
     // Simulator::Schedule (Seconds (30), &ChangeBW, dumbbellSim, 30e6);
@@ -583,7 +586,10 @@ int main (int argc, char *argv[])
     //Simulator::Schedule (Seconds (40), &ChangeDelay, dumbbellSim, 0.1);
 
     Simulator::Stop (Seconds (sim_duration));
+    std::cout << "simulation started and duration is " 
+                << Seconds (sim_duration).GetSeconds () << " seconds" << std::endl;
     Simulator::Run ();
+    std::cout << "simulation completed " << std::endl;
 
     Simulator::Destroy();
     return 0;

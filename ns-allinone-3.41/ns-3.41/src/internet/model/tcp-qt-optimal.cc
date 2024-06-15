@@ -129,7 +129,7 @@ TcpQtOptimal::EnableQtOptimal(Ptr<TcpSocketState> tcb)
     m_doingQtOptimalNow = true;
     m_begSndNxt = tcb->m_nextTxSequence;
     m_cntRtt = 0;
-    m_minRtt = Time::Max();
+    //m_minRtt = Time::Max();
 }
 
 void
@@ -193,23 +193,20 @@ TcpQtOptimal::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 
             //measured RTT (average response time)
             double R = tcb->m_lastRtt.Get ().GetSeconds ();
+            //std::cout << "Rtt=" << R << " Rt=" << Rt << " Rmin=" << Rmin << std::endl;
+            //getchar ();
             // measured average occupancy of the system
             uint32_t L = tcb->m_bytesInFlight/tcb->m_segmentSize;
             uint32_t W = tcb->GetCwndInSegments (); //cwnd in packets
             // predict average occupancy
             uint32_t Lpred = L + W - W*R/Rt;
-            //if (Lpred == L) Lpred = L + 1;
+            if (Lpred == L) Lpred = L + 1;
             Lpred = std::max((int) Lpred, 2);
             m_predictedBytesInFlight = Lpred;
 
             uint32_t Wnew = W + std::ceil(Rmin*((double) Lpred - (double) L)/R);
-            //uint32_t Wnew = W + std::ceil(Rmin*((double) Lpred - (double) L)/Rt);
-            if (Lpred == L)
-            {
-                Wnew = std::ceil(Rt*W/R + 1);
-            }
 
-            if (Wnew == W) Wnew = W + 1; //(Lpred - L); //required for persistent excitation
+            if (Wnew == W) Wnew = W + 1; //required for persistent excitation
             Wnew = std::max((int) Wnew, 2);
 
             if (m_fairness_index)
@@ -243,16 +240,12 @@ TcpQtOptimal::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
                   //<< "m_maxRTT_prefer = " <<1.2*m_baseRtt.GetSeconds () << std::endl;
                   
             getchar ();*/
-
-            //this mimicks max-min resource allocation
-            //to allow slowstart if tcb->m_cWnd < tcb->m_ssThresh
             if (R > 1.01*Rmin)
-                tcb->m_ssThresh = GetSsThresh(tcb, 0);
+                tcb->m_ssThresh = std::max (std::min (tcb->m_ssThresh.Get (), 
+                  tcb->m_cWnd.Get () - tcb->m_segmentSize), 2 * tcb->m_segmentSize);
 
             tcb->m_cWnd = Wnew * tcb->m_segmentSize;
-            //tcb->m_ssThresh = std::max(tcb->m_ssThresh, 3 * tcb->m_cWnd / 4);
             m_cntRtt = 0;
-            //m_minRtt = Time::Max();
         }
 
         // Reset cntRtt & minRtt every RTT
@@ -279,10 +272,10 @@ TcpQtOptimal::GetSsThresh (Ptr<const TcpSocketState> tcb,
                        uint32_t bytesInFlight)
 {
   NS_LOG_FUNCTION (this << tcb << bytesInFlight);
-  return std::max (std::min (tcb->m_ssThresh.Get (), 
-                  tcb->m_cWnd.Get () - tcb->m_segmentSize), 2 * tcb->m_segmentSize);
+  //return std::max (std::min (tcb->m_ssThresh.Get (), 
+    //              tcb->m_cWnd.Get () - tcb->m_segmentSize), 2 * tcb->m_segmentSize);
 
-
+  return TcpNewReno::GetSsThresh (tcb, bytesInFlight);
   //return std::max(2 * tcb->m_segmentSize, bytesInFlight / 2);
 }
 

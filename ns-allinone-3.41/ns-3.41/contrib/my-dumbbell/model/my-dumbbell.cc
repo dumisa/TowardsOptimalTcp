@@ -1,7 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 #include "my-dumbbell.h"
-#include "ns3/error-model.h"
 
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
@@ -32,12 +31,23 @@ dumbbell::dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay,
     std::string queueDisc, uint32_t queueDiscSize,
     double error_p, double sim_start, double sim_stop)
 {
-
     queueDisc = "ns3::" + queueDisc;
     // Configure links
-    ns3::PointToPointHelper bottleNeckLink;
-    bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue(btlBW));
-    bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue(btlDelay));
+
+    // Configure the error model
+    // Here we use RateErrorModel with packet error rate
+    Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+    uv->SetStream(50);
+    m_error_model.SetRandomVariable(uv);
+    m_error_model.SetUnit(RateErrorModel::ERROR_UNIT_PACKET);
+    m_error_model.SetRate(error_p);
+    std::cout << "m_error_model rate = " << m_error_model.GetRate() << std::endl; 
+
+    //ns3::PointToPointHelper bottleNeckLink;
+    m_bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue(btlBW));
+    m_bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue(btlDelay));
+    m_bottleNeckLink.SetDeviceAttribute("ReceiveErrorModel", ns3::PointerValue(&m_error_model));
+
     //bottleNeckLink.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue ("1p"));
 
     ns3::PointToPointHelper accessLink; //left and right links
@@ -53,7 +63,7 @@ dumbbell::dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay,
     std::cout << "Nodes created" << std::endl;   
 
     // Add the link connecting routers
-    m_routerDevices = bottleNeckLink.Install (m_routers);
+    m_routerDevices = m_bottleNeckLink.Install (m_routers);
 
     std::cout << "Bottleneck link installed - created routerdevices" << std::endl;  
 
@@ -86,10 +96,7 @@ dumbbell::dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay,
     // Bottleneck link traffic control configuration
     TrafficControlHelper tchPfifo_btl;
     tchPfifo_btl.SetRootQueueDisc (queueDisc, "MaxSize",
-                                 StringValue (std::to_string(queueDiscSize) + "p"));   
-
-
-
+                                 StringValue (std::to_string(queueDiscSize) + "p"));
     /*TrafficControlHelper tchCoDel_btl;
     tchCoDel.SetRootQueueDisc ("ns3::CoDelQueueDisc");
     Config::SetDefault ("ns3::CoDelQueueDisc::MaxSize", StringValue (std::to_string(queueDiscSize) + "p"));*/

@@ -43,6 +43,7 @@
 #include "ns3/flow-monitor-helper.h"
 #include "ns3/ipv4-global-routing-helper.h"
 #include "ns3/traffic-control-module.h"
+#include "ns3/error-model.h"
 
 namespace ns3 {
 
@@ -74,6 +75,10 @@ public:
   void printTopologyConfirmation ();
   void printAssignConfirmation ();
   //void ChangeBW (uint64_t);
+
+  PointToPointHelper m_bottleNeckLink;
+  RateErrorModel m_error_model;
+
 
   /**
    * \returns total number of nodes
