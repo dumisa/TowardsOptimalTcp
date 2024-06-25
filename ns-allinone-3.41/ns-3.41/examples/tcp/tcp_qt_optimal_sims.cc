@@ -86,7 +86,7 @@ std::string accessDelay = "0.01ms";
 double BdpMultiplier = 3; //packets
 double sim_duration = 200.0;
 std::string sim_name="default";
-double Rt_mult = 1;
+double Rtarget_mult = 1;
 
 /**
  * Get the Node Id From Context.
@@ -181,7 +181,7 @@ CwndTracer(std::string context, uint32_t oldval, uint32_t newval)
   DataRate BW(btlBW);
   Time delay(btlDelay);
   double RTT = 2*delay.GetSeconds ();
-  double Rt = Rt_mult*RTT;
+  double Rt = Rtarget_mult*RTT;
   double bdp = BW.GetBitRate ()*Rt/8/1448.0;
 
   double cost = ((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())*((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())
@@ -297,7 +297,7 @@ InFlightTracer(std::string context, uint32_t old [[maybe_unused]], uint32_t inFl
   DataRate BW(btlBW);
   Time delay(btlDelay);
   double RTT = 2*delay.GetSeconds ();
-  double Rt = Rt_mult*RTT;
+  double Rt = Rtarget_mult*RTT;
   double bdp = BW.GetBitRate ()*Rt/8/1448.0;
 
   double cost = ((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())*((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())
@@ -458,7 +458,7 @@ int main (int argc, char *argv[])
     cmd.AddValue ("BdpMultiplier", "Size of the Queue Disc", BdpMultiplier);
     cmd.AddValue ("num_flows", "Number of flows", num_flows);
     cmd.AddValue ("sim_duration", "simulation duration in seconds", sim_duration);
-    cmd.AddValue ("Rt_mult", "simulation duration in seconds", Rt_mult);
+    cmd.AddValue ("Rtarget_mult", "simulation duration in seconds", Rtarget_mult);
     cmd.AddValue ("fairness_index", "simulation duration in seconds", fairness_index);
     cmd.Parse (argc, argv);
 
@@ -474,9 +474,9 @@ int main (int argc, char *argv[])
 
     if (transport_prot == "TcpQtOptimal")
     {
-        Config::SetDefault ("ns3::TcpQtOptimal::Rt_mult", DoubleValue (Rt_mult));
+        Config::SetDefault ("ns3::TcpQtOptimal::Rtarget_mult", DoubleValue (Rtarget_mult));
         Config::SetDefault ("ns3::TcpQtOptimal::fairness_index", BooleanValue (fairness_index));
-        std::cout << " transport_prot = " <<  transport_prot << "_" << Rt_mult << "minRTT" << std::endl;
+        std::cout << " transport_prot = " <<  transport_prot << "_" << Rtarget_mult << "minRTT" << std::endl;
     }
     else
     {
@@ -509,7 +509,7 @@ int main (int argc, char *argv[])
     std::string file_transport_prot = transport_prot;
     if (transport_prot == "TcpQtOptimal")
     {
-        uint32_t num1 = Rt_mult*10;
+        uint32_t num1 = Rtarget_mult*10;
         uint32_t num2 = num1/10;
         uint32_t num3 = num1 % 10;
 

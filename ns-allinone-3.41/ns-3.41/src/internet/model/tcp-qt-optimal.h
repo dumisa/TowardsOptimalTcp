@@ -1,4 +1,4 @@
- /*
+  /*
  * Copyright (c) 2024 Dumisa Ngwenya <dumisa@crocs.co.za; ngwenyad@sentech.co.za>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -52,34 +52,34 @@ class TcpSocketState;
 
 /**
 * \brief tcp-qtoptimal implementation
-	 *
-	 *
-	 * 
-	 */
+     *
+     *
+     * 
+     */
 class TcpQtOptimal : public TcpNewReno
 {
-	public:
-	  /**
-	   * \brief Get the type ID.
-	   * \return the object TypeId
-	   */
-		static TypeId GetTypeId ();
+    public:
+      /**
+       * \brief Get the type ID.
+       * \return the object TypeId
+       */
+        static TypeId GetTypeId ();
 
-		TcpQtOptimal ();
+        TcpQtOptimal ();
 
-	  /**
-	   * \brief Copy constructor.
-	   * \param sock object to copy.
-	   */
-		TcpQtOptimal (const TcpQtOptimal& sock);
+      /**
+       * \brief Copy constructor.
+       * \param sock object to copy.
+       */
+        TcpQtOptimal (const TcpQtOptimal& sock);
 
-		~TcpQtOptimal () override;
+        ~TcpQtOptimal () override;
 
-		std::string GetName () const;
+        std::string GetName () const;
 
-		void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
-	                      const Time& rtt);
-		    /**
+        void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
+                          const Time& rtt);
+            /**
      * \brief Enable/disable Vegas algorithm depending on the congestion state
      *
      * We only start a Vegas cycle when we are in normal congestion state (CA_OPEN state).
@@ -87,48 +87,55 @@ class TcpQtOptimal : public TcpNewReno
      * \param tcb internal congestion state
      * \param newState new congestion state to which the TCP is going to switch
      */
-    	void CongestionStateSet(Ptr<TcpSocketState> tcb,
+        void CongestionStateSet(Ptr<TcpSocketState> tcb,
                             const TcpSocketState::TcpCongState_t newState) override;
-		void IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
-		//virtual void IncreaseWindow_option1 (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
-		uint32_t GetSsThresh(Ptr<const TcpSocketState> tcb, 
-								uint32_t bytesInFlight) override;
+        void IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
+        //virtual void IncreaseWindow_option1 (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
+        uint32_t GetSsThresh(Ptr<const TcpSocketState> tcb, 
+                                uint32_t bytesInFlight) override;
 
-		virtual Ptr<TcpCongestionOps> Fork () override;
+        virtual Ptr<TcpCongestionOps> Fork () override;
 
-		void SetRt_mult (double Rt_mult);
-		void SetFairnessIndex (bool fairness_index);
+        void SetRtarget_mult (double Rtarget_mult);
+        void SetFairnessIndex (bool fairness_index);
 
-	  private:
-	    /**
-	     * \as in Vegas, brief Enable QtOptimal algorithm to start taking QtOptimal samples
-	     *
-	     * as in Vewgas, QtOptimal algorithm is enabled in the following situations:
-	     * 1. at the establishment of a connection
-	     * 2. after an RTO
-	     * 3. after fast recovery
-	     * 4. when an idle connection is restarted
-	     *
-	     * \param tcb internal congestion state
-	     */
-	    void EnableQtOptimal(Ptr<TcpSocketState> tcb);
+        uint32_t ComputeQtCwnd (Ptr<TcpSocketState> tcb);
 
-	    /**
-	     * \as in Vegas, brief Stop taking QtOptimal samples
-	     */
-	    void DisableQtOptimal();
+      private:
+        /**
+         * \as in Vegas, brief Enable QtOptimal algorithm to start taking QtOptimal samples
+         *
+         * as in Vewgas, QtOptimal algorithm is enabled in the following situations:
+         * 1. at the establishment of a connection
+         * 2. after an RTO
+         * 3. after fast recovery
+         * 4. when an idle connection is restarted
+         *
+         * \param tcb internal congestion state
+         */
+        void EnableQtOptimal(Ptr<TcpSocketState> tcb);
 
-	    TracedValue<uint32_t> m_predictedBytesInFlight {0};
+        /**
+         * \as in Vegas, brief Stop taking QtOptimal samples
+         */
+        void DisableQtOptimal();
 
-	private:
-	  Time m_baseRtt;                    //!< Minimum of all ModNewReno RTT measurements seen during connection
-	  Time m_minRtt;                     //!< Minimum of all RTT measurements within last RTT
-	  uint32_t m_cntRtt;                 //!< Number of RTT measurements during last RTT
-	  double m_Rt_mult;
-	  bool m_fairness_index;
-	  bool m_doingQtOptimalNow;         //!< If true, do Vegas for this RTT
-	  SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
-	  
+        TracedValue<uint32_t> m_predictedBytesInFlight {0};
+
+    private:
+      Time m_baseRtt;                    //!< Minimum of all ModNewReno RTT measurements seen during connection
+      Time m_rttProp;                     //!< Minimum of all RTT measurements within last RTT
+      Time m_rttPropStamp;
+      Time m_probeRttPropStamp;
+      Time m_probeRttDuration {Seconds(0.2)};
+      Time m_rttPropFilterLen {Seconds(10)};
+      uint32_t m_priorCwnd {1024};
+      uint32_t m_cntRtt;                 //!< Number of RTT measurements during last RTT
+      double m_Rtarget_mult;
+      bool m_fairness_index;
+      SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
+      bool m_probeRtt {false};
+      
 
 };
 
@@ -137,4 +144,3 @@ class TcpQtOptimal : public TcpNewReno
 } //end namespace ns3
 
 #endif /* TCP_QTOPTIMAL_H */
-
