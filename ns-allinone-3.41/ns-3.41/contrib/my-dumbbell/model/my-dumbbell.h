@@ -62,9 +62,10 @@ public:
         double error_p, double sim_start, double sim_stop);
   ~dumbbell ();
   void CreateBtlneck ();
-  void CreateSenderReceiverPairs (uint32_t);
+  void AddSenderReceiverPairs (uint32_t num, std::string accessBW, std::string accessDelay, 
+                                                uint32_t app_start, uint32_t app_stop);
   void CreateRouters ();
-  void AddSenderReceiverPairs (uint32_t);
+  //void AddSenderReceiverPairs (uint32_t);
   void AddAccessLinks ();
   void CreateTopology ();
   void CreateTopology (uint8_t flows, std::string btlBW, std::string btlDelay, 

@@ -32,6 +32,7 @@ using namespace ns3;
 std::string dir;
 std::string file_prefix;
 
+static bool firstAgg=true;                      //!< First congestion window.
 static std::map<uint32_t, bool> firstCwnd;                      //!< First congestion window.
 static std::map<uint32_t, bool> firstInFlight;                      //!< First congestion window.
 static std::map<uint32_t, bool> firstSshThr;                    //!< First SlowStart threshold.
@@ -73,7 +74,7 @@ static std::vector<double>  measured_source_btlBW;
 std::string transport_prot = "TcpWestwoodPlus";
 double error_p = 0.0;
 bool tracing = true;
-bool fairness_index = false;
+bool DoFairness = false;
 uint32_t SegmentSize = 1448;
 uint8_t num_flows = 1;
 std::string queue_disc_type = "PfifoFastQueueDisc";
@@ -83,10 +84,10 @@ std::string btlBW = "10Mbps";
 std::string accessBW = "10Gbps";
 std::string btlDelay = "100ms";
 std::string accessDelay = "0.01ms";
-double BdpMultiplier = 3; //packets
+double BdpMultiplier = 5; //packets
 double sim_duration = 200.0;
 std::string sim_name="default";
-double Rtarget_mult = 1;
+double rttTargetAlpha = 1.5;
 
 /**
  * Get the Node Id From Context.
@@ -181,7 +182,7 @@ CwndTracer(std::string context, uint32_t oldval, uint32_t newval)
   DataRate BW(btlBW);
   Time delay(btlDelay);
   double RTT = 2*delay.GetSeconds ();
-  double Rt = Rtarget_mult*RTT;
+  double Rt = rttTargetAlpha*RTT;
   double bdp = BW.GetBitRate ()*Rt/8/1448.0;
 
   double cost = ((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())*((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())
@@ -201,24 +202,32 @@ CwndTracer(std::string context, uint32_t oldval, uint32_t newval)
             << " " << cost
             << std::endl;
 
+    std::cout << now_time
+              << " NodeId=" << nodeId
+              << " inFlightValue=" << inFlightValue[nodeId]/1448 <<"pkts"
+              << " RttValue=" << RttValue[nodeId] << "s"
+              << " aveGoodput=" << std::ceil(100*aveGoodput[nodeId])/100 <<"Mbps"  
+              << " cost=" << std::ceil(1000*cost)/1000  
+              << std::endl;
+
     double aggcWnd=0;
     for (auto it=cWndValue.begin (); it != cWndValue.end(); it++)
     {
-        aggcWnd =+ it->second;
+        aggcWnd = aggcWnd + it->second;
     }
 
     double agginFlight=0;
     for (auto it=inFlightValue.begin (); it != inFlightValue.end(); it++)
     {
-        agginFlight =+ it->second;
+        agginFlight = agginFlight + it->second;
     }
 
     double sumRtt=0;
     for (auto it=RttValue.begin (); it != RttValue.end(); it++)
     {
-        sumRtt =+ it->second;
+        sumRtt = sumRtt + it->second;
     }
-    double aveRtt = sumRtt/RttValue.size ();
+    double aveRtt= sumRtt/RttValue.size ();
 
     double fairness=0.0;
     double sum_x=0.0, sum_x2=0.0;
@@ -235,6 +244,25 @@ CwndTracer(std::string context, uint32_t oldval, uint32_t newval)
             + ((aggcWnd/1448.0 - last_aggcWnd/1448.0)/bdp)*((aggcWnd/1448.0 - last_aggcWnd/1448.0)/bdp);
 
 
+  if (firstAgg)
+  {
+        *AggStream->GetStream() << "| now_time " 
+                << "| aggcWnd "
+                << "| agginFlight "
+                << "| aveRtt "
+                << "| insAggThroughput "  
+                << "| aveAggThroughput "
+                << "| insAggGoodput "  
+                << "| aveAggGoodput "
+                << "| AggTxPkts "
+                << "| AggRetransPkts "
+                << "| fairness "
+                << "| aggcost |"
+                << std::endl; 
+        firstAgg = false;
+
+  }
+
   *AggStream->GetStream() << now_time 
             << " " << aggcWnd
             << " " << agginFlight
@@ -248,6 +276,18 @@ CwndTracer(std::string context, uint32_t oldval, uint32_t newval)
             << " " << fairness
             << " " << aggcost
             << std::endl;
+
+    std::cout << now_time
+              << " NodeId=" << nodeId
+              << " agginFlight=" << agginFlight/1448 <<"pkts"
+              << " aggcWnd=" << aggcWnd/1448 <<"pkts"
+              << " aveRtt=" << aveRtt << "s"
+              << " sumRtt=" << sumRtt << "s" <<std::endl
+              << " aveAggGoodput=" << std::ceil(100*aveAggGoodput)/100 <<"Mbps" 
+              << " aveAggThroughput=" << std::ceil(100*aveAggThroughput)/100 <<"Mbps"  << std::endl 
+              << " fairness=" << std::ceil(100*fairness)/100 
+              << std::endl;
+    //getchar();
 
     last_cWndValue[nodeId] = cWndValue[nodeId];
     last_aggcWnd = aggcWnd;
@@ -266,17 +306,17 @@ RttTracer(std::string context, Time oldval, Time newval)
 {
     uint32_t nodeId = GetNodeIdFromContext(context);
 
+    RttValue[nodeId] = newval.GetSeconds();
+
     if (firstRtt[nodeId])
     {
-        *rttStream[nodeId]->GetStream() << "0.0 " << oldval.GetSeconds() << std::endl;
+        //*rttStream[nodeId]->GetStream() << "0.0 " << oldval.GetSeconds() << std::endl;
         firstRtt[nodeId] = false;
     }
 
 
     *rttStream[nodeId]->GetStream()
         << Simulator::Now().GetSeconds() << " " << newval.GetSeconds() << std::endl;
-
-    RttValue[nodeId] = newval.GetSeconds();
 
 }
 
@@ -297,7 +337,7 @@ InFlightTracer(std::string context, uint32_t old [[maybe_unused]], uint32_t inFl
   DataRate BW(btlBW);
   Time delay(btlDelay);
   double RTT = 2*delay.GetSeconds ();
-  double Rt = Rtarget_mult*RTT;
+  double Rt = rttTargetAlpha*RTT;
   double bdp = BW.GetBitRate ()*Rt/8/1448.0;
 
   double cost = ((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())*((inFlightValue[nodeId]/1448.0/bdp - 1)/inFlightValue.size ())
@@ -447,7 +487,7 @@ int main (int argc, char *argv[])
     cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, TcpLinuxReno, "
                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat, "
-                "TcpLp, TcpDctcp, TcpCubic, TcpBbr, TcpBbrV2, TcpQtOptimal", transport_prot);
+                "TcpLp, TcpDctcp, TcpCubic, TcpBbr, TcpBbrV2, TcpQtCol, TcpQtColFair", transport_prot);
     cmd.AddValue ("error_p", "Packet error rate", error_p);
     cmd.AddValue ("btlBW", "Bottleneck bandwidth", btlBW);
     cmd.AddValue ("btlDelay", "Bottleneck delay", btlDelay);
@@ -458,25 +498,29 @@ int main (int argc, char *argv[])
     cmd.AddValue ("BdpMultiplier", "Size of the Queue Disc", BdpMultiplier);
     cmd.AddValue ("num_flows", "Number of flows", num_flows);
     cmd.AddValue ("sim_duration", "simulation duration in seconds", sim_duration);
-    cmd.AddValue ("Rtarget_mult", "simulation duration in seconds", Rtarget_mult);
-    cmd.AddValue ("fairness_index", "simulation duration in seconds", fairness_index);
+    cmd.AddValue ("rttTargetAlpha", "simulation duration in seconds", rttTargetAlpha);
+    cmd.AddValue ("DoFairness", "simulation duration in seconds", DoFairness);
     cmd.Parse (argc, argv);
 
     //This configuration is important to ensure certainity or minimal requirement for uncontrolled queues
     Config::SetDefault ("ns3::DropTailQueue<Packet>::MaxSize", StringValue ("1p"));
     Config::SetDefault ("ns3::TcpL4Protocol::SocketType", StringValue ("ns3::" + transport_prot));
-    Config::SetDefault ("ns3::TcpSocket::SndBufSize", UintegerValue (62914560));
-    Config::SetDefault ("ns3::TcpSocket::RcvBufSize", UintegerValue (62914560));
+    Config::SetDefault ("ns3::TcpSocket::SndBufSize", UintegerValue (1073741824));
+    Config::SetDefault ("ns3::TcpSocket::RcvBufSize", UintegerValue (1073741824));
     Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (10));
     uint32_t delAckCount = 2;
     Config::SetDefault ("ns3::TcpSocket::DelAckCount", UintegerValue (delAckCount));
     Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448)); 
 
-    if (transport_prot == "TcpQtOptimal")
+    if (transport_prot == "TcpQtCol")
     {
-        Config::SetDefault ("ns3::TcpQtOptimal::Rtarget_mult", DoubleValue (Rtarget_mult));
-        Config::SetDefault ("ns3::TcpQtOptimal::fairness_index", BooleanValue (fairness_index));
-        std::cout << " transport_prot = " <<  transport_prot << "_" << Rtarget_mult << "minRTT" << std::endl;
+        Config::SetDefault ("ns3::TcpQtCol::rttTargetAlpha", DoubleValue (rttTargetAlpha));
+        std::cout << " transport_prot = " <<  transport_prot << "_" << rttTargetAlpha << "minRTT" << std::endl;
+    }
+    else if (transport_prot == "TcpQtColFair")
+    {
+        Config::SetDefault ("ns3::TcpQtColFair::rttTargetAlpha", DoubleValue (rttTargetAlpha));
+        std::cout << " transport_prot = " <<  transport_prot << "_" << rttTargetAlpha << "minRTT" << std::endl;
     }
     else
     {
@@ -507,9 +551,9 @@ int main (int argc, char *argv[])
     // Create a new directory to store the output of the program
 
     std::string file_transport_prot = transport_prot;
-    if (transport_prot == "TcpQtOptimal")
+    if (transport_prot == "TcpQtCol" || transport_prot == "TcpQtColFair")
     {
-        uint32_t num1 = Rtarget_mult*10;
+        uint32_t num1 = rttTargetAlpha*10;
         uint32_t num2 = num1/10;
         uint32_t num3 = num1 % 10;
 

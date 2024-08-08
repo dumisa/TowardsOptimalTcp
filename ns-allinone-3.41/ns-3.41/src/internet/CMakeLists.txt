@@ -106,6 +106,8 @@ set(source_files
     model/tcp-option.cc
     model/tcp-prr-recovery.cc
     model/tcp-qt-optimal.cc
+    model/tcp-qt-col.cc
+    model/tcp-qt-col-fair.cc
     model/tcp-rate-ops.cc
     model/tcp-recovery-ops.cc
     model/tcp-rx-buffer.cc
@@ -232,6 +234,8 @@ set(header_files
     model/tcp-option.h
     model/tcp-prr-recovery.h
     model/tcp-qt-optimal.h
+    model/tcp-qt-col.h
+    model/tcp-qt-col-fair.h
     model/tcp-rate-ops.h
     model/tcp-recovery-ops.h
     model/tcp-rx-buffer.h

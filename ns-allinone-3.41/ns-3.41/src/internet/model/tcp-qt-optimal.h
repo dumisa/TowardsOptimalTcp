@@ -1,4 +1,4 @@
-  /*
+ /*
  * Copyright (c) 2024 Dumisa Ngwenya <dumisa@crocs.co.za; ngwenyad@sentech.co.za>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,7 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <sqlite3.h>
 
 namespace ns3
 {
@@ -79,64 +80,46 @@ class TcpQtOptimal : public TcpNewReno
 
         void PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
                           const Time& rtt);
-            /**
-     * \brief Enable/disable Vegas algorithm depending on the congestion state
-     *
-     * We only start a Vegas cycle when we are in normal congestion state (CA_OPEN state).
-     *
-     * \param tcb internal congestion state
-     * \param newState new congestion state to which the TCP is going to switch
-     */
-        void CongestionStateSet(Ptr<TcpSocketState> tcb,
-                            const TcpSocketState::TcpCongState_t newState) override;
+
         void IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
-        //virtual void IncreaseWindow_option1 (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
-        uint32_t GetSsThresh(Ptr<const TcpSocketState> tcb, 
-                                uint32_t bytesInFlight) override;
+/*        uint32_t GetSsThresh(Ptr<const TcpSocketState> tcb, 
+                                uint32_t bytesInFlight) override;*/
 
         virtual Ptr<TcpCongestionOps> Fork () override;
 
-        void SetRtarget_mult (double Rtarget_mult);
-        void SetFairnessIndex (bool fairness_index);
+        void SetRttTargetMultiplier (double rttTarget_alpha);
+        void SetDoFairness (bool DoFairness);
 
         uint32_t ComputeQtCwnd (Ptr<TcpSocketState> tcb);
 
-      private:
-        /**
-         * \as in Vegas, brief Enable QtOptimal algorithm to start taking QtOptimal samples
-         *
-         * as in Vewgas, QtOptimal algorithm is enabled in the following situations:
-         * 1. at the establishment of a connection
-         * 2. after an RTO
-         * 3. after fast recovery
-         * 4. when an idle connection is restarted
-         *
-         * \param tcb internal congestion state
-         */
-        void EnableQtOptimal(Ptr<TcpSocketState> tcb);
-
-        /**
-         * \as in Vegas, brief Stop taking QtOptimal samples
-         */
-        void DisableQtOptimal();
+        void UpdateRttProp(Ptr<TcpSocketState> tcb);
+ 
+        sqlite3 *db;
 
         TracedValue<uint32_t> m_predictedBytesInFlight {0};
 
     private:
-      Time m_baseRtt;                    //!< Minimum of all ModNewReno RTT measurements seen during connection
-      Time m_rttProp;                     //!< Minimum of all RTT measurements within last RTT
+      Time m_rttPropBase {Time::Max ()};        //!< Minimum of all RTT measurements seen during connection
+      Time m_rttProp {Time::Max ()};            //!< Minimum of all RTT measurements within last RTT
+      bool m_rttPropExpired{false};         //!< A boolean recording whether the BBR.RTprop has expired
+                                             //!< filter window, default 10 secs.
+      Time m_rttPropFilterLen{Seconds(10)}; //!< A constant specifying the length of the RTProp min
       Time m_rttPropStamp;
+      Time m_rttTarget;
+      double m_rttTargetAlpha;
       Time m_probeRttPropStamp;
       Time m_probeRttDuration {Seconds(0.2)};
-      Time m_rttPropFilterLen {Seconds(10)};
       uint32_t m_priorCwnd {1024};
       uint32_t m_cntRtt;                 //!< Number of RTT measurements during last RTT
-      double m_Rtarget_mult;
-      bool m_fairness_index;
+      
+      bool m_DoFairness;
       SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
       bool m_probeRtt {false};
-      
-
+      bool m_probeBw {false};
+      SequenceNumber32 m_nowAckedSeq {0};
+      SequenceNumber32 m_prevAckedSeq {0};
+      Time m_prevAckedSeqTime;
+      double m_prevRate {0};
 };
 
 

@@ -627,7 +627,7 @@ TcpBbr::UpdateBtlBw(Ptr<TcpSocketState> tcb, const TcpRateOps::TcpRateSample& rs
         m_maxBwFilter.Update(rs.m_deliveryRate, m_roundCount);
     }
 }
-
+ 
 void
 TcpBbr::UpdateModelAndState(Ptr<TcpSocketState> tcb, const TcpRateOps::TcpRateSample& rs)
 {
