@@ -315,8 +315,8 @@ RttTracer(std::string context, Time oldval, Time newval)
     }
 
 
-    *rttStream[nodeId]->GetStream()
-        << Simulator::Now().GetSeconds() << " " << newval.GetSeconds() << std::endl;
+ /*   *rttStream[nodeId]->GetStream()
+        << Simulator::Now().GetSeconds() << " " << newval.GetSeconds() << std::endl;*/
 
 }
 
@@ -344,12 +344,12 @@ InFlightTracer(std::string context, uint32_t old [[maybe_unused]], uint32_t inFl
             + (RttValue[nodeId] - Rt)*(RttValue[nodeId] - Rt) 
             + ((cWndValue[nodeId]/1448.0 - last_cWndValue[nodeId]/1448.0)/bdp)*((cWndValue[nodeId]/1448.0 - last_cWndValue[nodeId]/1448.0)/bdp);
 
-    *inFlightStream[nodeId]->GetStream() << Simulator::Now().GetSeconds() 
+/*    *inFlightStream[nodeId]->GetStream() << Simulator::Now().GetSeconds() 
                                          << " " << inFlightValue[nodeId]
                                          << " " << cWndValue[nodeId]
                                          << " " << RttValue[nodeId]
                                          << " " << cost
-                                         << std::endl;
+                                         << std::endl;*/
 
     last_cWndValue[nodeId] = cWndValue[nodeId];
 }
@@ -414,7 +414,7 @@ static void
 TraceRtt(std::string rtt_tr_file_name, uint32_t nodeId)
 {
     AsciiTraceHelper ascii;
-    rttStream[nodeId] = ascii.CreateFileStream(rtt_tr_file_name);
+    //rttStream[nodeId] = ascii.CreateFileStream(rtt_tr_file_name);
     Config::Connect("/NodeList/" + std::to_string(nodeId) + "/$ns3::TcpL4Protocol/SocketList/0/RTT",
                     MakeCallback(&RttTracer));
 }
@@ -430,7 +430,7 @@ static void
 TraceInFlight(std::string& in_flight_file_name, uint32_t nodeId)
 {
     AsciiTraceHelper ascii;
-    inFlightStream[nodeId] = ascii.CreateFileStream(in_flight_file_name);
+    //inFlightStream[nodeId] = ascii.CreateFileStream(in_flight_file_name);
     Config::Connect("/NodeList/" + std::to_string(nodeId) +
                         "/$ns3::TcpL4Protocol/SocketList/0/BytesInFlight",
                     MakeCallback(&InFlightTracer));
