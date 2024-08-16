@@ -114,8 +114,8 @@ build_example(
 )
 
 build_example(
-  NAME tcp_qt_optimal_sims
-  SOURCE_FILES tcp_qt_optimal_sims.cc
+  NAME tcp_qt_dynamic_network
+  SOURCE_FILES tcp_qt_dynamic_network.cc
   LIBRARIES_TO_LINK
     ${libpoint-to-point}
     ${libinternet}
@@ -127,4 +127,17 @@ build_example(
     ${libmy-dumbbell}
 )
 
+build_example(
+  NAME tcp_qt_static_network
+  SOURCE_FILES tcp_qt_static_network.cc
+  LIBRARIES_TO_LINK
+    ${libpoint-to-point}
+    ${libinternet}
+    ${libapplications}
+    ${libtraffic-control}
+    ${libnetwork}
+    ${libinternet-apps}
+    ${libflow-monitor}
+    ${libmy-dumbbell}
+)
 
