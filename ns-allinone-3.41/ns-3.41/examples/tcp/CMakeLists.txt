@@ -114,8 +114,8 @@ build_example(
 )
 
 build_example(
-  NAME tcp_qt_dynamic_network
-  SOURCE_FILES tcp_qt_dynamic_network.cc
+  NAME tcp_qt_changing_bw
+  SOURCE_FILES tcp_qt_changing_bw.cc
   LIBRARIES_TO_LINK
     ${libpoint-to-point}
     ${libinternet}
@@ -128,8 +128,22 @@ build_example(
 )
 
 build_example(
-  NAME tcp_qt_static_network
-  SOURCE_FILES tcp_qt_static_network.cc
+  NAME tcp_qt_static
+  SOURCE_FILES tcp_qt_static.cc
+  LIBRARIES_TO_LINK
+    ${libpoint-to-point}
+    ${libinternet}
+    ${libapplications}
+    ${libtraffic-control}
+    ${libnetwork}
+    ${libinternet-apps}
+    ${libflow-monitor}
+    ${libmy-dumbbell}
+)
+
+build_example(
+  NAME tcp_qt_changing_delay
+  SOURCE_FILES tcp_qt_changing_delay.cc
   LIBRARIES_TO_LINK
     ${libpoint-to-point}
     ${libinternet}
