@@ -60,10 +60,11 @@ public:
   dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay, 
         std::string accessBW, std::string accessDelay, std::string queueDisc, uint32_t queueDiscSize, 
         double error_p, double sim_start, double sim_stop);
+  dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay, 
+        std::string accessBW, std::string accessDelay, std::string queueDisc, uint32_t queueDiscSize,
+        double error_p, std::vector<double> app_start, std::vector<double> app_stop);
   ~dumbbell ();
   void CreateBtlneck ();
-  void AddSenderReceiverPairs (uint32_t num, std::string accessBW, std::string accessDelay, 
-                                                uint32_t app_start, uint32_t app_stop);
   void CreateRouters ();
   //void AddSenderReceiverPairs (uint32_t);
   void AddAccessLinks ();
@@ -72,7 +73,8 @@ public:
         std::string accessBW, std::string accessDelay, std::string queueDisc, uint32_t queueDiscSize, 
         double error_p, double sim_start, double sim_stop);
   void InstallStack (InternetStackHelper);
-  void AssignIpv4Addresses (Ipv4AddressHelper, Ipv4AddressHelper, Ipv4AddressHelper);
+  void AssignIpv4Addresses (Ipv4AddressHelper leftIp, Ipv4AddressHelper rightIp, 
+                            Ipv4AddressHelper routerIp);
   void printTopologyConfirmation ();
   void printAssignConfirmation ();
   //void ChangeBW (uint64_t);

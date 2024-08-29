@@ -155,3 +155,17 @@ build_example(
     ${libmy-dumbbell}
 )
 
+build_example(
+  NAME tcp_qt_add_new_flows
+  SOURCE_FILES tcp_qt_add_new_flows.cc
+  LIBRARIES_TO_LINK
+    ${libpoint-to-point}
+    ${libinternet}
+    ${libapplications}
+    ${libtraffic-control}
+    ${libnetwork}
+    ${libinternet-apps}
+    ${libflow-monitor}
+    ${libmy-dumbbell}
+)
+

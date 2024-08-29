@@ -76,7 +76,7 @@ double error_p = 0.0;
 bool tracing = true;
 bool DoFairness = false;
 uint32_t SegmentSize = 1448;
-uint8_t num_flows = 1;
+uint8_t num_flows = 3;
 std::string queue_disc_type = "PfifoFastQueueDisc";
 std::string recovery = "TcpClassicRecovery";
 
@@ -85,7 +85,7 @@ std::string accessBW = "10Gbps";
 std::string btlDelay = "100ms";
 std::string accessDelay = "0.01ms";
 double BdpMultiplier = 5; //packets
-double sim_duration = 200.0;
+double sim_duration = 100.0;
 std::string sim_name="default";
 double rttTargetAlpha = 1.5;
 
@@ -529,7 +529,7 @@ int main (int argc, char *argv[])
 
 
     // Set the simulation start and stop time
-    double start_time = 0.1;
+    double start_time = 0.001;
     double stop_time = start_time + sim_duration;
 
     DataRate access_b(accessBW);
@@ -537,13 +537,25 @@ int main (int argc, char *argv[])
     Time access_d(accessDelay);
     Time bottle_d(btlDelay);
 
-
     uint32_t queueSize_bytes = static_cast<uint32_t>(BdpMultiplier * (std::min(access_b, bottle_b).GetBitRate() / 8) *
                                           ((access_d +  bottle_d) * 2).GetSeconds());
     uint32_t queueSize_pkts = queueSize_bytes/SegmentSize;
 
+    std::vector<double> app_start;
+    std::vector<double> app_stop;
+
+    num_flows = 3;
+    for (uint32_t i = 0; i<num_flows; i++)
+    {
+        app_start.push_back(start_time);
+        app_stop.push_back(stop_time);
+    }
+    app_start[0] = app_start[0];
+    app_start[1] = 25;
+    app_start[2] = 50;
+
     dumbbell dumbbellSim(num_flows, btlBW, btlDelay, accessBW, accessDelay, 
-            queue_disc_type, queueSize_pkts, error_p, start_time, stop_time);
+            queue_disc_type, queueSize_pkts, error_p, app_start, app_stop);
 
     std::cout << "dumbbell created successfully " << std::endl;
 
@@ -575,6 +587,8 @@ int main (int argc, char *argv[])
     //std::cout << "Debug point 1 - Press ENTER to continue" << std::endl;
     //getchar();
 
+
+
     // Set up tracing if enabled
     if (tracing)
     {
@@ -598,22 +612,22 @@ int main (int argc, char *argv[])
             inFlightValue[source_nodeId] = 0;
             RttValue[source_nodeId] = 0;
 
-            Simulator::Schedule(Seconds(start_time * index + 0.00001),
+            Simulator::Schedule(Seconds(app_start[index] + 0.001),
                                 &TraceCwnd,
                                 dir + file_prefix + flowString + "-cwnd.data",
                                 source_nodeId);
 
-            Simulator::Schedule(Seconds(start_time * index + 0.00001),
+            Simulator::Schedule(Seconds(app_start[index] + 0.001),
                                 &TraceRtt,
                                 dir + file_prefix + flowString + "-rtt.data",
                                 source_nodeId);
 
-            Simulator::Schedule(Seconds(start_time * index + 0.00001),
+            Simulator::Schedule(Seconds(app_start[index] + 0.001),
                                 &TraceInFlight,
                                 dir + file_prefix + flowString + "-inflight.data",
                                 source_nodeId);
 
-            Simulator::Schedule(Seconds(start_time * index + 0.00001),
+            Simulator::Schedule(Seconds(app_start[index] + 0.001),
                                 &TraceTcpTxData,
                                source_nodeId);
         }
@@ -621,9 +635,9 @@ int main (int argc, char *argv[])
     }
     std::cout << "simulation schedule done " << std::endl;
 
-    Simulator::Schedule (Seconds (0.0001), &ChangeBW, dumbbellSim, 100e6);
-    Simulator::Schedule (Seconds (25), &ChangeBW, dumbbellSim, 400e6);
-    Simulator::Schedule (Seconds (55), &ChangeBW, dumbbellSim, 100e6);
+    // Simulator::Schedule (Seconds (0.0001), &ChangeBW, dumbbellSim, 100e6);
+    // Simulator::Schedule (Seconds (25), &ChangeBW, dumbbellSim, 400e6);
+    // Simulator::Schedule (Seconds (55), &ChangeBW, dumbbellSim, 100e6);
     //Simulator::Schedule (Seconds (40), &ChangeBW, dumbbellSim, 5e6);
     //Simulator::Schedule (Seconds (1), &StochBW, dumbbellSim);
     //Simulator::Schedule (Seconds (20), &ChangeDelay, dumbbellSim, 0.01);

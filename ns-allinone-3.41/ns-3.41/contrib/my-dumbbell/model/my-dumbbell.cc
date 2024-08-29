@@ -151,6 +151,132 @@ dumbbell::dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay,
     std::cout << "dumbbell topology configured " << std::endl;
 }
 
+dumbbell::dumbbell(uint8_t flows, std::string btlBW, std::string btlDelay, 
+    std::string accessBW, std::string accessDelay, std::string queueDisc, uint32_t queueDiscSize,
+    double error_p, std::vector<double> app_start, std::vector<double> app_stop)
+{
+    queueDisc = "ns3::" + queueDisc;
+    // Configure links
+
+    // Configure the error model
+    // Here we use RateErrorModel with packet error rate
+    Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+    uv->SetStream(50);
+    m_error_model.SetRandomVariable(uv);
+    m_error_model.SetUnit(RateErrorModel::ERROR_UNIT_PACKET);
+    m_error_model.SetRate(error_p);
+    std::cout << "m_error_model rate = " << m_error_model.GetRate() << std::endl; 
+
+    //ns3::PointToPointHelper bottleNeckLink;
+    m_bottleNeckLink.SetDeviceAttribute("DataRate", ns3::StringValue(btlBW));
+    m_bottleNeckLink.SetChannelAttribute("Delay", ns3::StringValue(btlDelay));
+    m_bottleNeckLink.SetDeviceAttribute("ReceiveErrorModel", ns3::PointerValue(&m_error_model));
+
+    //bottleNeckLink.SetQueue("ns3::DropTailQueue", "MaxSize", StringValue ("1p"));
+
+    ns3::PointToPointHelper accessLink; //left and right links
+      
+    accessLink.SetDeviceAttribute("DataRate",
+                ns3::StringValue(accessBW));
+    accessLink.SetChannelAttribute("Delay",
+                ns3::StringValue(accessDelay));
+
+    // Create the nodes
+    m_routers.Create (2);
+    m_leftLeaf.Create (flows);
+    m_rightLeaf.Create (flows);
+    std::cout << "Nodes created" << std::endl;   
+
+    // Add the link connecting routers
+    m_routerDevices = m_bottleNeckLink.Install (m_routers);
+
+    std::cout << "Bottleneck link installed - created routerdevices" << std::endl;  
+
+    // Add the left side links
+    for (uint32_t i = 0; i < flows; ++i)
+    {
+        NetDeviceContainer c = accessLink.Install (m_routers.Get (0), m_leftLeaf.Get (i));
+        m_leftRouterDevices.Add (c.Get (0));
+        m_leftLeafDevices.Add (c.Get (1));
+    }
+    std::cout << "Senders connected" << std::endl; 
+
+    // Add the right side links
+    for (uint32_t i = 0; i < flows; ++i)
+    {
+        NetDeviceContainer c = accessLink.Install (m_routers.Get (1),
+                                                  m_rightLeaf.Get (i));
+        m_rightRouterDevices.Add (c.Get (0));
+        m_rightLeafDevices.Add (c.Get (1));
+    }   
+    std::cout << "Receivers connected" << std::endl; 
+
+    // install internet stack on all nodes
+    ns3::InternetStackHelper stack;
+    //InstallStack(stack);
+    stack.Install(m_routers);
+    stack.Install(m_leftLeaf);
+    stack.Install(m_rightLeaf);
+
+    // Bottleneck link traffic control configuration
+    TrafficControlHelper tchPfifo_btl;
+    tchPfifo_btl.SetRootQueueDisc (queueDisc, "MaxSize",
+                                 StringValue (std::to_string(queueDiscSize) + "p"));
+    /*TrafficControlHelper tchCoDel_btl;
+    tchCoDel.SetRootQueueDisc ("ns3::CoDelQueueDisc");
+    Config::SetDefault ("ns3::CoDelQueueDisc::MaxSize", StringValue (std::to_string(queueDiscSize) + "p"));*/
+
+    if (queueDiscSize > 0) 
+    {
+        m_btl_queueDiscs = tchPfifo_btl.Install (m_routerDevices);
+    }
+
+    // assign ipv4 addresses
+    ns3::Ipv4AddressHelper routerIp =
+        ns3::Ipv4AddressHelper("10.3.0.0", "255.255.255.0");
+    ns3::Ipv4AddressHelper leftIp =
+        ns3::Ipv4AddressHelper("10.1.0.0", "255.255.255.0");
+    ns3::Ipv4AddressHelper rightIp =
+        ns3::Ipv4AddressHelper("10.2.0.0", "255.255.255.0");
+    AssignIpv4Addresses(leftIp, rightIp, routerIp);
+
+    //NS_LOG_INFO ("Initialize Global Routing.");
+    Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+
+    std::cout << "RoutingTables done " << std::endl;
+
+    uint16_t port = 50000;
+    Address sinkLocalAddress (InetSocketAddress (Ipv4Address::GetAny (), port));
+    PacketSinkHelper sinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
+
+    m_sender_sockets.reserve (LeftCount ());
+
+    std::cout << "sender sockets created " << std::endl;
+
+    for (uint16_t i = 0; i < LeftCount (); i++)
+    {
+        AddressValue remoteAddress (InetSocketAddress (m_rightLeafInterfaces.GetAddress (i, 0), port));
+        Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448));
+        BulkSendHelper ftp ("ns3::TcpSocketFactory", Address ());
+
+        ftp.SetAttribute ("Remote", remoteAddress);
+        ftp.SetAttribute ("SendSize", UintegerValue (1448));
+        ftp.SetAttribute ("MaxBytes", UintegerValue (0));
+
+        ApplicationContainer sourceApp = ftp.Install (m_leftLeaf.Get (i));
+        sourceApp.Start (Seconds (app_start[i]));
+        sourceApp.Stop (Seconds (app_stop[i]));
+
+        sinkHelper.SetAttribute ("Protocol", TypeIdValue (TcpSocketFactory::GetTypeId ()));
+        ApplicationContainer sinkApp = sinkHelper.Install (m_rightLeaf.Get (i));
+        sinkApp.Start (Seconds (app_start[i]));
+        sinkApp.Stop (Seconds (app_stop[i]));
+    }
+
+    std::cout << "dumbbell topology configured " << std::endl;
+}
+
+
 
 void dumbbell::InstallStack (InternetStackHelper stack)
 {
@@ -174,7 +300,7 @@ void dumbbell::AssignIpv4Addresses (Ipv4AddressHelper leftIp,
       Ipv4InterfaceContainer ifc = leftIp.Assign (ndc);
       m_leftLeafInterfaces.Add (ifc.Get (0));
       m_leftRouterInterfaces.Add (ifc.Get (1));
-      //std::cout << GetLeftLeafIpv4Address (i) << " " << m_leftRouterInterfaces.GetAddress (i) << std::endl; 
+      std::cout << GetLeftLeafIpv4Address (i) << " " << m_leftRouterInterfaces.GetAddress (i) << std::endl; 
       leftIp.NewNetwork ();
     }
   // Assign to right side
@@ -186,93 +312,11 @@ void dumbbell::AssignIpv4Addresses (Ipv4AddressHelper leftIp,
       Ipv4InterfaceContainer ifc = rightIp.Assign (ndc);
       m_rightLeafInterfaces.Add (ifc.Get (0));
       m_rightRouterInterfaces.Add (ifc.Get (1));
-      //std::cout << m_rightLeafInterfaces.GetAddress (i) << " " << m_rightRouterInterfaces.GetAddress (i) << std::endl; 
+      std::cout << m_rightLeafInterfaces.GetAddress (i) << " " << m_rightRouterInterfaces.GetAddress (i) << std::endl; 
       rightIp.NewNetwork ();
     }
 
     std::cout << "IP addresses assigned " << std::endl;
-}
-
-void dumbbell::AddSenderReceiverPairs (uint32_t num, std::string accessBW, std::string accessDelay, 
-                                                uint32_t app_start, uint32_t app_stop)
-{
-    ns3::PointToPointHelper accessLink; //left and right links
-    accessLink.SetDeviceAttribute("DataRate",
-            ns3::StringValue(accessBW));
-    accessLink.SetChannelAttribute("Delay",
-            ns3::StringValue(accessDelay));
-    
-    uint32_t old_count = m_leftLeaf.GetN();
-    m_leftLeaf.Create(num);
-    m_rightLeaf.Create(num);
-    uint32_t new_count = m_leftLeaf.GetN();
-    
-    ns3::InternetStackHelper stack;
-    // Add the left side links
-    for (uint32_t i = old_count; i < new_count; ++i)
-    {
-        NetDeviceContainer c = accessLink.Install (m_routers.Get (0), 
-                                                    m_leftLeaf.Get (i));
-        m_leftRouterDevices.Add (c.Get (0));
-        m_leftLeafDevices.Add (c.Get (1));
-        stack.Install(m_leftLeaf.Get(i));
-    }
-    std::cout << "Senders connected" << std::endl; 
-
-    // Add the right side links
-    for (uint32_t i = old_count; i < new_count; ++i)
-    {
-        NetDeviceContainer c = accessLink.Install (m_routers.Get (1),
-                                                  m_rightLeaf.Get (i));
-        m_rightRouterDevices.Add (c.Get (0));
-        m_rightLeafDevices.Add (c.Get (1));
-        stack.Install(m_rightLeaf.Get(i));
-    }   
-    std::cout << "Receivers connected" << std::endl; 
-
-    // assign ipv4 addresses
-    ns3::Ipv4AddressHelper routerIp =
-        ns3::Ipv4AddressHelper("10.3.0.0", "255.255.255.0");
-    ns3::Ipv4AddressHelper leftIp =
-        ns3::Ipv4AddressHelper("10.1.0.0", "255.255.255.0");
-    ns3::Ipv4AddressHelper rightIp =
-        ns3::Ipv4AddressHelper("10.2.0.0", "255.255.255.0");
-
-    AssignIpv4Addresses(leftIp, rightIp, routerIp);
-
-    //NS_LOG_INFO ("Initialize Global Routing.");
-    Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
-    std::cout << "RoutingTables done " << std::endl;
-
-    uint16_t port = 50000;
-    Address sinkLocalAddress (InetSocketAddress (Ipv4Address::GetAny (), port));
-    PacketSinkHelper sinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
-
-    m_sender_sockets.reserve (LeftCount ());
-
-    std::cout << "sender sockets created " << std::endl;
-
-    for (uint16_t i = old_count; i < new_count; i++)
-    {
-        AddressValue remoteAddress (InetSocketAddress (m_rightLeafInterfaces.GetAddress (i, 0), port));
-        Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (1448));
-        BulkSendHelper ftp ("ns3::TcpSocketFactory", Address ());
-
-        ftp.SetAttribute ("Remote", remoteAddress);
-        ftp.SetAttribute ("SendSize", UintegerValue (1448));
-        ftp.SetAttribute ("MaxBytes", UintegerValue (0));
-
-        ApplicationContainer sourceApp = ftp.Install (m_leftLeaf.Get (i));
-        sourceApp.Start (Seconds (app_start));
-        sourceApp.Stop (Seconds (app_stop - 3));
-
-        sinkHelper.SetAttribute ("Protocol", TypeIdValue (TcpSocketFactory::GetTypeId ()));
-        ApplicationContainer sinkApp = sinkHelper.Install (m_rightLeaf.Get (i));
-        sinkApp.Start (Seconds (app_start));
-        sinkApp.Stop (Seconds (app_stop));
-    }
-    std::cout << "new flows added" << std::endl;
-
 }
 
 void dumbbell::printTopologyConfirmation ()
