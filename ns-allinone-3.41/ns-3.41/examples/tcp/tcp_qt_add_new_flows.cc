@@ -527,7 +527,7 @@ int main (int argc, char *argv[])
         std::cout << " transport_prot = " <<  transport_prot << std::endl;
     }
 
-
+    sim_duration = 200.0;
     // Set the simulation start and stop time
     double start_time = 0.001;
     double stop_time = start_time + sim_duration;
@@ -550,9 +550,8 @@ int main (int argc, char *argv[])
         app_start.push_back(start_time);
         app_stop.push_back(stop_time);
     }
-    app_start[0] = app_start[0];
-    app_start[1] = 25;
-    app_start[2] = 50;
+    app_start[1] = 10;
+    //app_start[2] = 50;
 
     dumbbell dumbbellSim(num_flows, btlBW, btlDelay, accessBW, accessDelay, 
             queue_disc_type, queueSize_pkts, error_p, app_start, app_stop);
