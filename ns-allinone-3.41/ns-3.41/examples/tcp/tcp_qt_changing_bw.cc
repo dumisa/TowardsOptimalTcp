@@ -623,8 +623,8 @@ int main (int argc, char *argv[])
 
     Simulator::Schedule (Seconds (0.0001), &ChangeBW, dumbbellSim, 100e6);
     Simulator::Schedule (Seconds (25), &ChangeBW, dumbbellSim, 25e6);
-    Simulator::Schedule (Seconds (50), &ChangeBW, dumbbellSim, 400e6);
-    Simulator::Schedule (Seconds (65), &ChangeBW, dumbbellSim, 300e6);
+    Simulator::Schedule (Seconds (50), &ChangeBW, dumbbellSim, 500e6);
+    //Simulator::Schedule (Seconds (65), &ChangeBW, dumbbellSim, 300e6);
     //Simulator::Schedule (Seconds (150), &ChangeBW, dumbbellSim, 20e6);
     //Simulator::Schedule (Seconds (40), &ChangeBW, dumbbellSim, 5e6);
     //Simulator::Schedule (Seconds (1), &StochBW, dumbbellSim);
