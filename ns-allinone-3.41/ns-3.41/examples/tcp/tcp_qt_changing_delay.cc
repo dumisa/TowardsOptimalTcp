@@ -629,8 +629,8 @@ int main (int argc, char *argv[])
     //Simulator::Schedule (Seconds (40), &ChangeBW, dumbbellSim, 5e6);
     //Simulator::Schedule (Seconds (1), &StochBW, dumbbellSim);
     //Simulator::Schedule (Seconds (20), &ChangeDelay, dumbbellSim, 0.02);
-    Simulator::Schedule (Seconds (35), &ChangeDelay, dumbbellSim, 0.05);
-    Simulator::Schedule (Seconds (65), &ChangeDelay, dumbbellSim, 0.02);
+    Simulator::Schedule (Seconds (25), &ChangeDelay, dumbbellSim, 0.04);
+    Simulator::Schedule (Seconds (50), &ChangeDelay, dumbbellSim, 0.02);
 
     Simulator::Stop (Seconds (sim_duration));
     std::cout << "simulation started and duration is " 

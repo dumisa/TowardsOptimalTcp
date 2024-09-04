@@ -61,6 +61,7 @@ TcpQtColFair::TcpQtColFair ()
   : TcpNewReno()
 {
     NS_LOG_FUNCTION (this);
+    m_tsb = CreateObject<TcpSocketBase>();
 }
 
 TcpQtColFair::TcpQtColFair (const TcpQtColFair& sock)
@@ -79,6 +80,7 @@ TcpQtColFair::TcpQtColFair (const TcpQtColFair& sock)
     m_usePriorInFlight (false)
 {
     NS_LOG_FUNCTION (this);
+    m_tsb = CopyObject(sock.m_tsb);
 }
 
 TcpQtColFair::~TcpQtColFair (void)
@@ -102,9 +104,9 @@ void TcpQtColFair::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
       return;
     }
 
-    m_rttProp= std::min(m_rttProp, rtt);
-    m_rttTarget = m_rttTargetAlpha*m_rttProp;
-
+    //m_rttProp= std::min(m_rttProp, rtt);
+    //m_rttTarget = m_rttTargetAlpha*m_rttProp;
+    UpdateRttProp(tcb);
 
     NS_LOG_DEBUG ("Updated m_rttProp = " << m_rttProp);
     
@@ -148,6 +150,22 @@ void TcpQtColFair::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAck
         tcb->m_cWnd = 4 * tcb->m_segmentSize;
         m_probeRttDuration = m_rttProp;
         m_rttProp = Time::Max ();
+    }
+
+   if (!m_probeRtt && tcb->m_bytesInFlight < 0.5*m_priorInFlight && tcb->m_lastRtt > m_rttTarget)
+    {
+        m_rttOvershootCnt++;
+        if (m_rttOvershootCnt > 2)
+        {
+            m_rttProp = tcb->m_lastRtt;
+            m_rttOvershootCnt = 0;
+        }
+        //std::cout << " changingRTT: m_rttOvershootCnt=" << m_rttOvershootCnt << std::endl;
+        //getchar ();
+    }
+    else 
+    {
+        m_rttOvershootCnt = 0;
     }
 
     UpdateRttProp(tcb);

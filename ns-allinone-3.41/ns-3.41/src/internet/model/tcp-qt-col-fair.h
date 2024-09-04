@@ -31,6 +31,7 @@
  */
 
 #include "ns3/tcp-congestion-ops.h"
+#include "tcp-socket-base.h"
 #include "ns3/tcp-recovery-ops.h"
 #include "ns3/sequence-number.h"
 #include "ns3/traced-value.h"
@@ -81,6 +82,7 @@ class TcpQtColFair : public TcpNewReno
         void UpdateRttProp(Ptr<TcpSocketState> tcb);
         virtual Ptr<TcpCongestionOps> Fork () override;
         TracedValue<uint32_t> m_predictedBytesInFlight {0};
+        Ptr<TcpSocketBase> m_tsb; 
 
     private:
       Time m_rttProp {Time::Max ()};            //!< Minimum of all RTT measurements within last RTT
@@ -94,6 +96,7 @@ class TcpQtColFair : public TcpNewReno
       Time m_probeRttPropStamp;
       uint32_t m_priorInFlight {1024};
       uint32_t m_cntRtt;                 //!< Number of RTT measurements during last RTT
+      uint32_t m_rttOvershootCnt {0};
 
       //SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
       Time m_cwndChangeStamp {0};
