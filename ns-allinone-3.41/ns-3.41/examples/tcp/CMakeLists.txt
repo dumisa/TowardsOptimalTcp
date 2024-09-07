@@ -169,3 +169,17 @@ build_example(
     ${libmy-dumbbell}
 )
 
+build_example(
+  NAME tcp_qt_lossy
+  SOURCE_FILES tcp_qt_lossy.cc
+  LIBRARIES_TO_LINK
+    ${libpoint-to-point}
+    ${libinternet}
+    ${libapplications}
+    ${libtraffic-control}
+    ${libnetwork}
+    ${libinternet-apps}
+    ${libflow-monitor}
+    ${libmy-dumbbell}
+)
+
