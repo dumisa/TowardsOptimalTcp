@@ -103,6 +103,10 @@ class TcpQtColFair : public TcpNewReno
       bool m_probeRtt {false};
       bool m_usePriorInFlight {false};
       SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
+
+      Time m_coolingPeriod;
+      Time m_coolingStamp;
+      bool m_cooling {false};
 };
 
 

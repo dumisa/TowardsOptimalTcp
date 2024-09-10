@@ -127,7 +127,6 @@ void TcpQtCol::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
                   9*tcb->m_cWnd.Get ()/10), 2 * tcb->m_segmentSize);
 
             tcb->m_cWnd = ComputeCwnd (tcb);
-            //m_rttProp = tcb->m_lastRtt;
             m_cntRtt = 0;
         }
 

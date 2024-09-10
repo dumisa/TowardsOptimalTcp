@@ -152,16 +152,19 @@ void TcpQtColFair::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAck
         m_rttProp = Time::Max ();
     }
 
-   if (!m_probeRtt && tcb->m_bytesInFlight < 0.5*m_priorInFlight && tcb->m_lastRtt > m_rttTarget)
+   if (!m_probeRtt && tcb->m_bytesInFlight < 0.5*m_priorInFlight && tcb->m_lastRtt > 2*m_rttTarget)
     {
         m_rttOvershootCnt++;
         if (m_rttOvershootCnt > 2)
         {
-            m_rttProp = tcb->m_lastRtt;
+            m_probeRtt = true;
+            m_probeRttPropStamp = Simulator::Now ();
+            m_priorInFlight = tcb->m_bytesInFlight;
+            tcb->m_cWnd = 4 * tcb->m_segmentSize;
+            m_probeRttDuration = m_rttProp;
+            m_rttProp = Time::Max ();
             m_rttOvershootCnt = 0;
         }
-        //std::cout << " changingRTT: m_rttOvershootCnt=" << m_rttOvershootCnt << std::endl;
-        //getchar ();
     }
     else 
     {
