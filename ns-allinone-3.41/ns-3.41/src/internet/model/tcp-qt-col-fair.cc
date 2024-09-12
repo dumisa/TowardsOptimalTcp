@@ -61,7 +61,6 @@ TcpQtColFair::TcpQtColFair ()
   : TcpNewReno()
 {
     NS_LOG_FUNCTION (this);
-    m_tsb = CreateObject<TcpSocketBase>();
 }
 
 TcpQtColFair::TcpQtColFair (const TcpQtColFair& sock)
@@ -75,12 +74,9 @@ TcpQtColFair::TcpQtColFair (const TcpQtColFair& sock)
     m_probeRttDuration (sock.m_probeRttDuration),
     m_probeRttPropStamp (sock.m_probeRttPropStamp),
     m_priorInFlight (sock.m_priorInFlight),
-    m_cntRtt (sock.m_cntRtt),
-    m_probeRtt (false),
-    m_usePriorInFlight (false)
+    m_cntRtt (sock.m_cntRtt)
 {
     NS_LOG_FUNCTION (this);
-    m_tsb = CopyObject(sock.m_tsb);
 }
 
 TcpQtColFair::~TcpQtColFair (void)
@@ -104,9 +100,9 @@ void TcpQtColFair::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
       return;
     }
 
-    //m_rttProp= std::min(m_rttProp, rtt);
-    //m_rttTarget = m_rttTargetAlpha*m_rttProp;
-    UpdateRttProp(tcb);
+    m_rttProp= std::min(m_rttProp, rtt);
+    m_rttTarget = m_rttTargetAlpha*m_rttProp;
+    //UpdateRttProp(tcb);
 
     NS_LOG_DEBUG ("Updated m_rttProp = " << m_rttProp);
     
@@ -119,21 +115,70 @@ void
 TcpQtColFair::UpdateRttProp(Ptr<TcpSocketState> tcb)
 {
     NS_LOG_FUNCTION(this << tcb);
-
-    if (m_rttProp == Seconds(0) || m_rttProp == Time::Max ())
-    {
-        m_rttProp = tcb->m_lastRtt;
-        m_rttTarget = m_rttTargetAlpha*m_rttProp;
-        m_rttPropStamp = Simulator::Now ();
-    }
    
-    if (tcb->m_lastRtt >= Seconds(0) && (tcb->m_lastRtt <= m_rttProp || m_rttPropExpired))
+    if (tcb->m_lastRtt >= Seconds(0) && (tcb->m_lastRtt < m_rttProp || m_rttPropExpired 
+                        || m_rttProp == Seconds(0) || m_rttProp == Time::Max ()))
     {
-        m_rttProp = tcb->m_lastRtt;
+        m_rttProp = tcb->m_lastRtt.Get();
         m_rttTarget = m_rttTargetAlpha*m_rttProp;
         m_rttPropStamp = Simulator::Now();
-        //m_rttPropExpired = false;
     }
+
+}
+
+void TcpQtColFair::MinRttChangeDetection(Ptr<TcpSocketState> tcb)
+{
+    NS_LOG_FUNCTION(this << tcb);
+    double cur_rtt = tcb->m_lastRtt.Get().GetSeconds();
+    double cur_cwndInPkts = tcb->m_cWnd/tcb->m_segmentSize;
+    double cur_pktsInFlight = tcb->m_bytesInFlight/tcb->m_segmentSize;
+    double cur_time = Simulator::Now().GetSeconds();
+
+    double measure1, measure2, measure3;
+
+    //if (cur_time - m_prev_time >= m_rttProp.GetSeconds())
+    //{
+            if (cur_cwndInPkts/cur_rtt - m_prev_cwndInPkts/m_prev_rtt != 0)
+            {
+                measure1 = (cur_pktsInFlight - m_prev_pktsInFlight)/
+                            (cur_cwndInPkts/cur_rtt - m_prev_cwndInPkts/m_prev_rtt);
+            } else if (cur_pktsInFlight - m_prev_pktsInFlight == 0 
+                            && cur_cwndInPkts/cur_rtt - m_prev_cwndInPkts/m_prev_rtt == 0)
+            {
+                measure1 = 1;
+            } else {
+                measure1 = (cur_pktsInFlight - m_prev_pktsInFlight)/
+                            (cur_cwndInPkts/cur_rtt - m_prev_cwndInPkts/m_prev_rtt);
+            }
+        
+            if (cur_time - m_prev_time > 0)
+            {
+                measure2 = (cur_pktsInFlight - m_prev_pktsInFlight)/(cur_time - m_prev_time);
+            }
+            else measure2 = 1111;
+        
+            measure3 = abs(cur_rtt - m_prev_rtt);
+        
+            std::cout << Simulator::Now().GetSeconds()
+                        << " measure1=" << measure1 
+                        << " measure2=" << measure2 
+                        << " measure3=" << measure3 
+                        << std::endl;
+            std::cout << Simulator::Now().GetSeconds()
+                        << " cur_rtt=" << cur_rtt 
+                        << " m_prev_rtt=" << m_prev_rtt
+                        << " m_rttProp=" << m_rttProp.GetSeconds() 
+                        << " m_rttTarget=" << m_rttTarget .GetSeconds()
+                        << " cur_pktsInFlight=" << cur_pktsInFlight
+                        << " m_prev_pktsInFlight=" << m_prev_pktsInFlight
+                        << std::endl;
+        
+            //if ((int)cur_time%10 < 1 && cur_time >= 1) getchar();
+            m_prev_cwndInPkts = cur_cwndInPkts;
+            m_prev_rtt = cur_rtt;
+            m_prev_pktsInFlight = cur_pktsInFlight;
+            m_prev_time = cur_time;
+        //}
 
 }
 
@@ -150,26 +195,24 @@ void TcpQtColFair::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAck
         tcb->m_cWnd = 4 * tcb->m_segmentSize;
         m_probeRttDuration = m_rttProp;
         m_rttProp = Time::Max ();
+        m_rttPropStamp = Simulator::Now ();
     }
 
-   if (!m_probeRtt && tcb->m_bytesInFlight < 0.5*m_priorInFlight && tcb->m_lastRtt > 2*m_rttTarget)
-    {
-        m_rttOvershootCnt++;
-        if (m_rttOvershootCnt > 2)
-        {
-            m_probeRtt = true;
-            m_probeRttPropStamp = Simulator::Now ();
-            m_priorInFlight = tcb->m_bytesInFlight;
-            tcb->m_cWnd = 4 * tcb->m_segmentSize;
-            m_probeRttDuration = m_rttProp;
-            m_rttProp = Time::Max ();
-            m_rttOvershootCnt = 0;
-        }
-    }
-    else 
-    {
-        m_rttOvershootCnt = 0;
-    }
+    // if (!m_probeRtt && ((tcb->m_bytesInFlight <= 0.5*m_priorInFlight 
+    //                  &&  tcb->m_lastRtt > 2*m_rttTarget) || tcb->m_bytesInFlight <= 4 * tcb->m_segmentSize))
+    //  {
+    //      m_rttOvershootCnt++;
+    //     if (m_rttOvershootCnt > 2)
+    //     {
+    //         m_rttProp = tcb->m_lastRtt;
+    //         m_usePriorInFlight = true;
+    //         m_rttOvershootCnt = 0;
+    //     }
+    // }
+    // else 
+    // {
+    //     m_rttOvershootCnt = 0;
+    // }
 
     UpdateRttProp(tcb);
 
@@ -178,7 +221,6 @@ void TcpQtColFair::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAck
     {
         m_probeRtt = false;
         m_usePriorInFlight = true;
-        m_rttPropStamp = Simulator::Now ();
     }
 
     if (!m_probeRtt)
@@ -245,6 +287,13 @@ uint32_t TcpQtColFair::ComputeCwnd (Ptr<TcpSocketState> tcb)
     {
         Lpred = 0.9*m_priorInFlight/tcb->m_segmentSize;
         m_usePriorInFlight = false;
+
+        std::cout << Simulator::Now().GetSeconds() 
+                    << " m_priorInFlight=" << m_priorInFlight
+                    << " Lpred=" << Lpred
+                    << std::endl;
+
+        //getchar(); 
     }
     
     Lpred = std::max((int) Lpred, 4);

@@ -82,7 +82,7 @@ class TcpQtColFair : public TcpNewReno
         void UpdateRttProp(Ptr<TcpSocketState> tcb);
         virtual Ptr<TcpCongestionOps> Fork () override;
         TracedValue<uint32_t> m_predictedBytesInFlight {0};
-        Ptr<TcpSocketBase> m_tsb; 
+        void MinRttChangeDetection(Ptr<TcpSocketState> tcb);
 
     private:
       Time m_rttProp {Time::Max ()};            //!< Minimum of all RTT measurements within last RTT
@@ -104,9 +104,11 @@ class TcpQtColFair : public TcpNewReno
       bool m_usePriorInFlight {false};
       SequenceNumber32 m_begSndNxt;      //!< Right edge during last RTT
 
-      Time m_coolingPeriod;
-      Time m_coolingStamp;
-      bool m_cooling {false};
+      double m_prev_rtt;
+      double m_prev_pktsInFlight;
+      double m_prev_cwndInPkts;
+      double m_prev_time;
+      bool m_minRttChanged {false};
 };
 
 
