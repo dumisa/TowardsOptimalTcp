@@ -121,7 +121,7 @@ TcpQtColFair::UpdateRttProp(Ptr<TcpSocketState> tcb)
     {
         m_rttProp = tcb->m_lastRtt.Get();
         m_rttTarget = m_rttTargetAlpha*m_rttProp;
-        m_rttPropStamp = Simulator::Now();
+        //m_rttPropStamp = Simulator::Now();
     }
 
 }
