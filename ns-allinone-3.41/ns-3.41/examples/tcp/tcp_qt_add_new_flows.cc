@@ -544,14 +544,15 @@ int main (int argc, char *argv[])
     std::vector<double> app_start;
     std::vector<double> app_stop;
 
-    num_flows = 3;
+    num_flows = 5;
     for (uint32_t i = 0; i<num_flows; i++)
     {
         app_start.push_back(start_time);
         app_stop.push_back(stop_time);
     }
-    app_start[1] = 10;
-    //app_start[2] = 50;
+    app_start[2] = 10;
+    app_start[3] = 35;
+    app_start[4] = 60;
 
     dumbbell dumbbellSim(num_flows, btlBW, btlDelay, accessBW, accessDelay, 
             queue_disc_type, queueSize_pkts, error_p, app_start, app_stop);
