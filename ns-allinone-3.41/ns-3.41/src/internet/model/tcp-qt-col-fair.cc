@@ -261,7 +261,6 @@ void TcpQtColFair::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAck
             TcpNewReno::SlowStart(tcb, segmentsAcked);
             m_begSndNxt = tcb->m_nextTxSequence;
         }
-
     }
 
 }

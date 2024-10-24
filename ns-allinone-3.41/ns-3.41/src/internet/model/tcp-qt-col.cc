@@ -100,7 +100,7 @@ void TcpQtCol::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 void TcpQtCol::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
 {
     NS_LOG_FUNCTION (this << tcb << segmentsAcked);
-    
+
     if (tcb->m_lastAckedSeq >= m_begSndNxt)
     { // as in Vegas, we do QtCol cwnd adjustment every RTT.
       NS_LOG_LOGIC ("A cycle has finished, we adjust cwnd once per RTT.");    
@@ -129,7 +129,6 @@ void TcpQtCol::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
             tcb->m_cWnd = ComputeCwnd (tcb);
             m_cntRtt = 0;
         }
-
     }
     else if (tcb->m_cWnd < tcb->m_ssThresh && tcb->m_lastRtt < m_rttTarget)
     {
